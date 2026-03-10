@@ -3,122 +3,200 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NexMeet — Live Video</title>
+<title>NexMeet</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
-<script>
-// Load PeerJS from CDN - pinned stable version
-</script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#07090f;--s1:#0e1420;--s2:#141d2b;--s3:#1a2437;--cyan:#00d4ff;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--text:#dde6f0;--muted:#4a607a;--border:#1c2d40}
+:root{
+  --bg:#060810;--s1:#0c1018;--s2:#111824;--s3:#17202e;
+  --cyan:#00e0ff;--green:#1adb7a;--red:#ff4757;--amber:#ffb300;--purple:#9d6fff;
+  --text:#e2eaf5;--muted:#485e74;--border:#1a2a3a;
+}
 html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
-.orb{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none;z-index:0}
-.o1{width:500px;height:500px;background:radial-gradient(circle,rgba(0,212,255,.07),transparent 70%);top:-150px;right:-100px}
-.o2{width:350px;height:350px;background:radial-gradient(circle,rgba(124,58,237,.06),transparent 70%);bottom:-80px;left:-80px}
-/* lobby */
-#lobby{height:100%;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1}
-.card{width:100%;max-width:400px;background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:32px;box-shadow:0 30px 80px rgba(0,0,0,.5);position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.5),transparent)}
-.logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-.logo-i{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--cyan),#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px}
-.logo-n{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.3px}
-.logo-s{font-size:11px;color:var(--muted)}
-.tabs{display:flex;gap:2px;background:var(--s2);padding:3px;border-radius:9px;margin-bottom:20px}
-.tab{flex:1;padding:8px;border-radius:7px;border:none;background:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+
+/* ── LOBBY ── */
+#lobby{height:100%;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);position:relative}
+#lobby::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 20%,rgba(0,224,255,.06),transparent),radial-gradient(ellipse 50% 40% at 20% 80%,rgba(157,111,255,.05),transparent)}
+.card{width:100%;max-width:420px;background:var(--s1);border:1px solid var(--border);border-radius:22px;padding:36px;position:relative;z-index:1;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.card::after{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,224,255,.6),transparent)}
+.logo{display:flex;align-items:center;gap:11px;margin-bottom:28px}
+.logo-i{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.logo-n{font-family:'Syne',sans-serif;font-weight:800;font-size:21px;letter-spacing:-.4px}
+.logo-s{font-size:11px;color:var(--muted);margin-top:1px}
+.tabs{display:flex;gap:2px;background:var(--s2);padding:3px;border-radius:10px;margin-bottom:22px}
+.tab{flex:1;padding:9px;border-radius:8px;border:none;background:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
 .tab.on{background:var(--s3);color:var(--text)}
-.lbl{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:.04em}
-.inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:12px}
+.lbl{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:.05em;text-transform:uppercase}
+.inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:14px}
 .inp:focus{border-color:var(--cyan)} .inp::placeholder{color:var(--muted)}
-.code-inp{letter-spacing:5px;font-family:'Syne',sans-serif;font-size:20px;text-transform:uppercase;text-align:center}
-.btn{width:100%;padding:12px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:7px}
-.btn-p{background:var(--cyan);color:#000;box-shadow:0 0 20px rgba(0,212,255,.25)}
-.btn-p:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 0 30px rgba(0,212,255,.4)}
-.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.code-inp{letter-spacing:6px;font-family:'Syne',sans-serif;font-size:22px;text-transform:uppercase;text-align:center}
+.btn{width:100%;padding:13px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-p{background:var(--cyan);color:#000;font-weight:700;box-shadow:0 0 24px rgba(0,224,255,.3)}
+.btn-p:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 0 36px rgba(0,224,255,.45)}
+.btn-p:disabled{opacity:.35;cursor:not-allowed;transform:none}
 .btn-g{background:var(--s2);color:var(--text);border:1px solid var(--border)}
 .btn-g:hover{background:var(--s3);border-color:var(--cyan)}
-.codebox{background:var(--s2);border:1px solid rgba(0,212,255,.3);border-radius:10px;padding:14px;text-align:center;margin-bottom:12px;cursor:pointer;transition:all .18s}
-.codebox:hover{border-color:var(--cyan)}
-.codenum{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:8px;color:var(--cyan);text-shadow:0 0 16px rgba(0,212,255,.3)}
-.codesub{font-size:11px;color:var(--muted);margin-top:3px}
-.sbar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:var(--s2);border:1px solid var(--border);border-radius:9px;font-size:13px;color:var(--muted);margin-top:10px}
+.codebox{background:var(--s2);border:1px solid rgba(0,224,255,.35);border-radius:11px;padding:16px;text-align:center;margin-bottom:14px;cursor:pointer;transition:all .18s;position:relative}
+.codebox:hover{border-color:var(--cyan);background:rgba(0,224,255,.04)}
+.codenum{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;letter-spacing:10px;color:var(--cyan);text-shadow:0 0 20px rgba(0,224,255,.35)}
+.codesub{font-size:11px;color:var(--muted);margin-top:4px}
+.sbar{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--s2);border:1px solid var(--border);border-radius:9px;font-size:13px;color:var(--muted);margin-top:12px}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-.d-g{background:var(--muted)}.d-a{background:var(--amber);animation:blink .9s infinite}.d-ok{background:var(--green);animation:blink 1.5s infinite}
-/* meeting */
-#meeting{display:none;height:100%;flex-direction:column;position:relative;z-index:1}
-.mhdr{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--border);background:rgba(14,20,32,.9);backdrop-filter:blur(12px);flex-shrink:0}
-.mbody{flex:1;display:flex;overflow:hidden;min-height:0}
-.varea{flex:1;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden}
-.vgrid{flex:1;display:grid;gap:10px;min-height:0}
-.g1{grid-template-columns:1fr}.g2{grid-template-columns:1fr 1fr}
-.vtile{position:relative;background:var(--s2);border:1px solid var(--border);border-radius:13px;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-color .25s,box-shadow .25s}
-.vtile video{width:100%;height:100%;object-fit:cover}
-.vtile video.mir{transform:scaleX(-1)}
-.vtag{position:absolute;bottom:9px;left:9px;background:rgba(7,9,15,.75);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;display:flex;align-items:center;gap:5px}
-.avf{width:64px;height:64px;border-radius:50%;border:3px solid;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;position:absolute}
-.wait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--bg);z-index:5}
-.spin{width:42px;height:42px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--cyan);animation:spin 1s linear infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.d-g{background:var(--muted)}.d-a{background:var(--amber);animation:blink .8s infinite}.d-ok{background:var(--green);animation:blink 1.6s infinite}
+
+/* ── WAITING ROOM (guest pre-admit) ── */
+#waitroom{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--bg);position:relative}
+#waitroom::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(0,224,255,.05),transparent)}
+.wr-card{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:36px 40px;text-align:center;max-width:380px;width:100%;position:relative;z-index:1}
+.wr-card::after{content:'';position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,224,255,.5),transparent)}
+.wr-spinner{width:50px;height:50px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--cyan);animation:spin 1s linear infinite;margin:0 auto 20px}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* sidebar */
-.sidebar{width:280px;min-width:280px;display:flex;flex-direction:column;border-left:1px solid var(--border);background:rgba(14,20,32,.7);backdrop-filter:blur(10px)}
+.wr-cam{width:100%;max-width:300px;aspect-ratio:4/3;background:var(--s2);border-radius:12px;overflow:hidden;margin:0 auto 16px;position:relative;border:1px solid var(--border)}
+.wr-cam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.wr-title{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;margin-bottom:8px}
+.wr-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+
+/* ── ADMIT NOTIFICATION (host sees this) ── */
+#admit-notif{
+  position:fixed;top:20px;right:20px;z-index:1000;
+  background:var(--s1);border:1px solid rgba(0,224,255,.4);border-radius:16px;
+  padding:16px 20px;min-width:280px;max-width:320px;
+  box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(0,224,255,.1);
+  display:none;animation:slideIn .3s ease;
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.an-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.an-icon{width:36px;height:36px;border-radius:10px;background:rgba(0,224,255,.1);border:1px solid rgba(0,224,255,.3);display:flex;align-items:center;justify-content:center;font-size:16px}
+.an-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px}
+.an-sub{font-size:12px;color:var(--muted)}
+.an-btns{display:flex;gap:8px}
+.an-admit{flex:1;padding:9px;border-radius:8px;border:none;background:var(--green);color:#000;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.an-admit:hover{filter:brightness(1.1)}
+.an-deny{flex:1;padding:9px;border-radius:8px;border:none;background:rgba(255,71,87,.15);color:var(--red);border:1px solid rgba(255,71,87,.3);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.an-deny:hover{background:rgba(255,71,87,.25)}
+
+/* ── MEETING ── */
+#meeting{display:none;height:100%;flex-direction:column;background:var(--bg)}
+.mhdr{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--border);background:rgba(6,8,16,.95);backdrop-filter:blur(14px);flex-shrink:0;z-index:10}
+.hlogo{font-family:'Syne',sans-serif;font-weight:800;font-size:15px}
+.hcode{font-family:'Syne',sans-serif;font-size:12px;letter-spacing:3px;color:var(--cyan)}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:500}
+.pg{background:rgba(26,219,122,.1);color:var(--green);border:1px solid rgba(26,219,122,.25)}
+.pa{background:rgba(255,179,0,.1);color:var(--amber);border:1px solid rgba(255,179,0,.25)}
+.pr{background:rgba(255,71,87,.1);color:var(--red);border:1px solid rgba(255,71,87,.25)}
+
+/* ── VIDEO GRID ── */
+.mbody{flex:1;overflow:hidden;position:relative;display:flex}
+.varea{flex:1;display:flex;flex-direction:column;padding:10px;gap:10px;overflow:hidden;position:relative}
+
+/* Main/spotlight view */
+.spotlight{flex:1;position:relative;border-radius:14px;overflow:hidden;background:var(--s2);border:1px solid var(--border);cursor:pointer;min-height:0}
+.spotlight video{width:100%;height:100%;object-fit:cover;display:block}
+.spotlight video.mir{transform:scaleX(-1)}
+.spotlight .vtag{position:absolute;bottom:14px;left:14px;background:rgba(6,8,16,.8);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.spotlight .fsbutton{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:8px;background:rgba(6,8,16,.7);border:1px solid rgba(255,255,255,.15);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;z-index:5}
+.spotlight .fsbutton:hover{background:rgba(0,224,255,.2);border-color:var(--cyan)}
+.spotlight-av{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:var(--s2)}
+.spotlight-av .big-av{width:100px;height:100px;border-radius:50%;border:4px solid;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:36px;font-weight:800}
+
+/* Thumbnail strip */
+.thumbs{display:flex;gap:8px;height:110px;flex-shrink:0;overflow-x:auto}
+.thumbs::-webkit-scrollbar{height:4px}
+.thumbs::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.thumb{position:relative;flex-shrink:0;width:176px;border-radius:10px;overflow:hidden;background:var(--s2);border:2px solid transparent;cursor:pointer;transition:border-color .2s}
+.thumb:hover,.thumb.active-thumb{border-color:var(--cyan)}
+.thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.thumb video.mir{transform:scaleX(-1)}
+.thumb .ttag{position:absolute;bottom:5px;left:6px;font-size:10px;background:rgba(6,8,16,.8);padding:2px 7px;border-radius:5px;white-space:nowrap}
+.thumb .mic-off{position:absolute;top:5px;right:5px;font-size:10px;background:rgba(255,71,87,.2);border:1px solid rgba(255,71,87,.4);border-radius:4px;padding:1px 5px;color:var(--red)}
+.thumb-av{position:absolute;inset:0;display:none;align-items:center;justify-content:center}
+.thumb-av .sm-av{width:44px;height:44px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
+
+/* Fullscreen overlay */
+#fs-overlay{display:none;position:fixed;inset:0;z-index:500;background:#000;flex-direction:column}
+#fs-overlay video{flex:1;width:100%;object-fit:cover}
+#fs-overlay video.mir{transform:scaleX(-1)}
+#fs-overlay .fs-bar{position:absolute;bottom:0;left:0;right:0;padding:20px;background:linear-gradient(transparent,rgba(0,0,0,.8));display:flex;align-items:center;justify-content:space-between}
+#fs-overlay .fs-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
+#fs-close{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:10px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;transition:all .15s;z-index:5}
+#fs-close:hover{background:rgba(255,71,87,.3);border-color:var(--red)}
+
+/* Sidebar */
+.sidebar{width:276px;min-width:276px;display:flex;flex-direction:column;border-left:1px solid var(--border);background:rgba(11,16,24,.8);backdrop-filter:blur(10px)}
 .stabs{display:flex;border-bottom:1px solid var(--border)}
 .stab{flex:1;padding:11px 0;border:none;background:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-1px}
 .stab.on{color:var(--text);border-bottom-color:var(--cyan)}
 .spanel{flex:1;overflow-y:auto;padding:12px;display:none;flex-direction:column}
 .spanel.on{display:flex}
 .spanel::-webkit-scrollbar{width:3px}
-.spanel::-webkit-scrollbar-thumb{background:var(--border)}
-.cbox{flex:1;overflow-y:auto;margin-bottom:9px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* chat */
+.cbox{flex:1;overflow-y:auto;margin-bottom:9px;min-height:0}
 .cbox::-webkit-scrollbar{width:3px}
 .cbox::-webkit-scrollbar-thumb{background:var(--border)}
-.cm{padding:7px 10px;border-radius:8px;margin-bottom:6px;font-size:13px;animation:fadeup .2s ease}
+.cm{padding:8px 11px;border-radius:9px;margin-bottom:6px;font-size:13px;animation:fadeup .2s ease}
 @keyframes fadeup{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.cm.me{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.14);margin-left:16px}
+.cm.me{background:rgba(0,224,255,.08);border:1px solid rgba(0,224,255,.15);margin-left:16px}
 .cm.them{background:var(--s2);border:1px solid var(--border);margin-right:16px}
 .cm .who{font-size:10px;font-weight:600;color:var(--cyan);margin-bottom:2px}
 .cm .ts{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
 .crow{display:flex;gap:6px;flex-shrink:0}
 .ci{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .18s}
 .ci:focus{border-color:var(--cyan)} .ci::placeholder{color:var(--muted)}
-.sbtn2{width:37px;height:37px;border-radius:8px;border:none;background:var(--cyan);color:#000;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ir{display:flex;justify-content:space-between;padding:9px 11px;background:var(--s2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px}
+.sbtn{width:37px;height:37px;border-radius:8px;border:none;background:var(--cyan);color:#000;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s}
+.sbtn:hover{transform:scale(1.05)}
+/* info */
+.ir{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:var(--s2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px}
 .il{font-size:11px;color:var(--muted)}
-/* footer */
-.mftr{height:66px;display:flex;align-items:center;justify-content:center;gap:7px;border-top:1px solid var(--border);background:rgba(14,20,32,.92);backdrop-filter:blur(12px);flex-shrink:0;position:relative;padding:0 16px}
-.c{width:43px;height:43px;border-radius:11px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative}
+
+/* Footer */
+.mftr{height:68px;display:flex;align-items:center;justify-content:center;gap:7px;border-top:1px solid var(--border);background:rgba(6,8,16,.95);backdrop-filter:blur(12px);flex-shrink:0;position:relative;padding:0 16px}
+.c{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative;flex-shrink:0}
 .c:hover{background:var(--s3);border-color:var(--cyan);color:var(--cyan)}
-.c.off{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--red)}
-.c.hi{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:var(--cyan)}
-.ct{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s3);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s;font-family:'DM Sans',sans-serif}
+.c.off{background:rgba(255,71,87,.12);border-color:rgba(255,71,87,.3);color:var(--red)}
+.c.hi{background:rgba(0,224,255,.1);border-color:rgba(0,224,255,.3);color:var(--cyan)}
+.ct{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s3);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s;font-family:'DM Sans',sans-serif;z-index:20}
 .c:hover .ct{opacity:1}
-.endb{padding:0 18px;height:43px;border-radius:11px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.12);color:var(--red);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
-.endb:hover{background:rgba(239,68,68,.22)}
-.rtray{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--border);border-radius:13px;padding:7px 10px;display:flex;gap:5px;z-index:20}
-.rb{width:37px;height:37px;border-radius:8px;border:none;background:var(--s3);font-size:19px;cursor:pointer;transition:transform .1s;display:flex;align-items:center;justify-content:center}
+.endb{padding:0 20px;height:44px;border-radius:12px;border:1px solid rgba(255,71,87,.35);background:rgba(255,71,87,.12);color:var(--red);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.endb:hover{background:rgba(255,71,87,.22)}
+/* reaction tray */
+.rtray{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:8px 11px;display:flex;gap:5px;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.rb{width:38px;height:38px;border-radius:9px;border:none;background:var(--s3);font-size:20px;cursor:pointer;transition:transform .12s;display:flex;align-items:center;justify-content:center}
 .rb:hover{transform:scale(1.25)}
-.freact{position:absolute;font-size:32px;pointer-events:none;z-index:50;animation:fup 2.5s ease-out forwards}
-@keyframes fup{0%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:.8;transform:translateY(-65px) scale(1.3)}100%{opacity:0;transform:translateY(-120px) scale(.7)}}
-.recpill{display:flex;align-items:center;gap:5px;padding:3px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:16px;font-size:12px;color:var(--red)}
+/* floating reaction */
+.freact{position:absolute;font-size:34px;pointer-events:none;z-index:50;animation:fup 2.5s ease-out forwards}
+@keyframes fup{0%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:.8;transform:translateY(-70px) scale(1.3)}100%{opacity:0;transform:translateY(-130px) scale(.7)}}
+/* rec */
+.recpill{display:flex;align-items:center;gap:5px;padding:3px 9px;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.25);border-radius:16px;font-size:12px;color:var(--red)}
 .rdot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
-.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:16px;font-size:11px;font-weight:500}
-.pg{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
-.pa{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+/* toast */
+#toast{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);background:var(--s3);border:1px solid var(--border);border-radius:9px;padding:9px 18px;font-size:13px;z-index:2000;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 #toast.show{opacity:1}
 #mtimer{font-family:'Syne',sans-serif;font-size:13px;color:var(--muted)}
-@media(max-width:640px){.sidebar{display:none}.g2{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+@media(max-width:700px){.sidebar{display:none}.thumbs{height:80px}.thumb{width:120px}}
 </style>
 </head>
 <body>
-<div class="orb o1"></div><div class="orb o2"></div>
 <div id="toast"></div>
+<div id="admit-notif">
+  <div class="an-head">
+    <div class="an-icon">🚪</div>
+    <div><div class="an-title" id="an-name">Someone</div><div class="an-sub">wants to join the meeting</div></div>
+  </div>
+  <div class="an-btns">
+    <button class="an-admit" onclick="admitGuest()">✓ Admit</button>
+    <button class="an-deny" onclick="denyGuest()">✕ Deny</button>
+  </div>
+</div>
 
-<!-- LOBBY -->
+<!-- ══ LOBBY ══ -->
 <div id="lobby">
 <div class="card">
   <div class="logo">
     <div class="logo-i">⚡</div>
-    <div><div class="logo-n">NexMeet</div><div class="logo-s">Real P2P · WebRTC · E2E Encrypted</div></div>
+    <div><div class="logo-n">NexMeet</div><div class="logo-s">Real P2P · WebRTC · Waiting Room</div></div>
     <span class="pill pg" style="margin-left:auto;font-size:10px">LIVE</span>
   </div>
   <div class="tabs">
@@ -126,20 +204,20 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
     <button class="tab" id="tc" onclick="swTab('c')">New Meeting</button>
   </div>
   <div id="pj">
-    <span class="lbl">YOUR NAME</span>
+    <span class="lbl">Your Name</span>
     <input class="inp" id="jn" placeholder="Display name" maxlength="28"/>
-    <span class="lbl">MEETING CODE</span>
+    <span class="lbl">Meeting Code</span>
     <input class="inp code-inp" id="jc" placeholder="XXXXXX" maxlength="6"
       oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"/>
     <button class="btn btn-p" id="jbtn" onclick="doJoin()">🚀 Join Meeting</button>
   </div>
   <div id="pc2" style="display:none">
-    <span class="lbl">YOUR NAME</span>
+    <span class="lbl">Your Name</span>
     <input class="inp" id="cn" placeholder="Display name" maxlength="28"/>
-    <span class="lbl">SHARE THIS CODE WITH YOUR GUEST</span>
+    <span class="lbl">Share This Code</span>
     <div class="codebox" onclick="cpCode()">
       <div class="codenum" id="codeEl">——————</div>
-      <div class="codesub">👆 Click to copy · Share this with guest</div>
+      <div class="codesub">👆 Click to copy · Share with guests</div>
     </div>
     <button class="btn btn-p" id="cbtn" onclick="doCreate()">⚡ Start Meeting</button>
   </div>
@@ -147,44 +225,66 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 </div>
 </div>
 
-<!-- MEETING -->
+<!-- ══ WAITING ROOM (guest waits for admit) ══ -->
+<div id="waitroom">
+  <div class="wr-card">
+    <div class="wr-spinner" id="wr-spin"></div>
+    <div class="wr-cam">
+      <video id="wr-vid" autoplay muted playsinline></video>
+    </div>
+    <div class="wr-title">Waiting to be admitted</div>
+    <div class="wr-sub" id="wr-sub">The host will let you in shortly.<br/>Your camera is previewing below.</div>
+    <button class="btn btn-g" style="margin-top:4px" onclick="cancelWait()">✕ Cancel</button>
+  </div>
+</div>
+
+<!-- ══ MEETING ══ -->
 <div id="meeting">
   <div class="mhdr">
     <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:15px">⚡ NexMeet</span>
+      <span class="hlogo">⚡ NexMeet</span>
       <span style="width:1px;height:16px;background:var(--border);display:block"></span>
-      <span style="font-family:'Syne',sans-serif;font-size:13px;letter-spacing:3px;color:var(--cyan)" id="hcode"></span>
+      <span class="hcode" id="hcode"></span>
       <span id="recpill" style="display:none" class="recpill"><span class="rdot"></span> REC <span id="rectime">00:00</span></span>
     </div>
     <div style="display:flex;align-items:center;gap:7px">
-      <span id="ppill" style="display:none" class="pill pg">● Connected</span>
+      <span id="ppill" style="display:none" class="pill pg">● 2 Connected</span>
       <span id="wpill" class="pill pa">Waiting for peer…</span>
       <span id="mtimer">00:00</span>
-      <button onclick="cpCode()" class="btn btn-g" style="width:auto;padding:5px 10px;font-size:12px;height:auto">📋 Copy</button>
+      <button onclick="cpCode()" class="btn btn-g" style="width:auto;padding:5px 11px;font-size:12px;height:auto">📋 Copy</button>
     </div>
   </div>
-  <div class="mbody">
-    <div class="varea">
-      <div class="wait" id="wo">
-        <div class="spin"></div>
-        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700" id="wotxt">Waiting…</div>
-        <div style="color:var(--muted);font-size:13px;text-align:center;max-width:260px" id="wosubtxt">Share the code. The call connects automatically.</div>
-        <div style="font-family:'Syne',sans-serif;font-size:30px;font-weight:800;letter-spacing:9px;color:var(--cyan)" id="wcode"></div>
-        <button onclick="cpCode()" class="btn btn-g" style="width:auto;padding:7px 18px;font-size:13px">📋 Copy Code</button>
-      </div>
-      <div class="vgrid g1" id="vg" style="display:none">
-        <div class="vtile" id="lt">
-          <video id="lv" autoplay muted playsinline class="mir"></video>
-          <div class="avf" id="la" style="display:none"></div>
-          <div class="vtag"><span id="ln">You</span><span id="lmicon" style="display:none;font-size:10px">🔇</span></div>
+
+  <div class="mbody" id="mbody">
+    <div class="varea" id="varea">
+      <!-- Spotlight (main large view) -->
+      <div class="spotlight" id="spotlight" onclick="cycleSpotlight()">
+        <video id="spot-vid" autoplay playsinline></video>
+        <div class="spotlight-av" id="spot-av">
+          <div class="big-av" id="spot-av-inner"></div>
         </div>
-        <div class="vtile" id="rt" style="display:none">
+        <div class="vtag"><span id="spot-name">—</span></div>
+        <button class="fsbutton" onclick="openFS(event)" title="Fullscreen">⛶</button>
+      </div>
+      <!-- Thumbnail strip -->
+      <div class="thumbs" id="thumbs">
+        <!-- local thumb -->
+        <div class="thumb active-thumb" id="th-local" onclick="setSpotlight('local')">
+          <video id="lv" autoplay muted playsinline class="mir"></video>
+          <div class="thumb-av" id="th-local-av"><div class="sm-av" id="th-local-av-inner"></div></div>
+          <div class="ttag" id="th-local-name">You</div>
+          <div class="mic-off" id="th-local-muted" style="display:none">🔇</div>
+        </div>
+        <!-- remote thumb (hidden until peer connects) -->
+        <div class="thumb" id="th-remote" style="display:none" onclick="setSpotlight('remote')">
           <video id="rv" autoplay playsinline></video>
-          <div class="avf" id="ra" style="display:none"></div>
-          <div class="vtag"><span id="rn">Peer</span></div>
+          <div class="thumb-av" id="th-remote-av"><div class="sm-av" id="th-remote-av-inner"></div></div>
+          <div class="ttag" id="th-remote-name">Peer</div>
         </div>
       </div>
     </div>
+
+    <!-- Sidebar -->
     <div class="sidebar" id="sb">
       <div class="stabs">
         <button class="stab on" onclick="spanel('chat')">💬 Chat</button>
@@ -194,22 +294,20 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <div class="cbox" id="cbox"></div>
         <div class="crow">
           <input class="ci" id="ci" placeholder="Message…" maxlength="400" onkeydown="if(event.key==='Enter')sendMsg()"/>
-          <button class="sbtn2" onclick="sendMsg()">➤</button>
+          <button class="sbtn" onclick="sendMsg()">➤</button>
         </div>
       </div>
       <div class="spanel" id="sp-info">
         <div class="ir"><span class="il">Room Code</span><span id="ic" style="font-family:'Syne',sans-serif;letter-spacing:3px;color:var(--cyan)"></span></div>
         <div class="ir"><span class="il">Your Name</span><span id="in2"></span></div>
         <div class="ir"><span class="il">Peer</span><span id="ip">Waiting…</span></div>
-        <div class="ir"><span class="il">Peer ID</span><span id="ipid" style="font-size:11px;color:var(--muted)">—</span></div>
+        <div class="ir"><span class="il">Role</span><span id="irole" style="color:var(--cyan)">—</span></div>
         <div class="ir"><span class="il">ICE State</span><span id="istat" style="color:var(--amber)">—</span></div>
         <div class="ir"><span class="il">Encryption</span><span style="color:var(--green)">🔒 DTLS-SRTP</span></div>
-        <div style="margin-top:10px;padding:10px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.1);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.6">
-          Video &amp; audio travel directly peer-to-peer via WebRTC. Signaling uses PeerJS cloud (peerjs.com).
-        </div>
       </div>
     </div>
   </div>
+
   <div class="mftr">
     <div id="rtray" style="display:none" class="rtray">
       <button class="rb" onclick="react('👍')">👍</button>
@@ -234,352 +332,482 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
   </div>
 </div>
 
-<!-- Load PeerJS AFTER DOM -->
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script>
-// ─── State ────────────────────────────────────────────────────────────────
-let myPeer = null, remoteConn = null, remoteCall = null;
-let localStream = null, screenStream = null;
-let myName = '', peerName = '', roomCode = '', myRole = '';
-let micOn = true, camOn = true, handUp = false;
-let recording = false, recorder, recChunks = [];
-let meetStart = 0, timerInt, recInt, recSecs = 0;
-let rtOpen = false;
+<!-- Fullscreen overlay -->
+<div id="fs-overlay">
+  <button id="fs-close" onclick="closeFS()">✕</button>
+  <video id="fs-vid" autoplay playsinline></video>
+  <div class="fs-bar"><span class="fs-name" id="fs-name"></span><span class="pill pg" id="fs-live">● LIVE</span></div>
+</div>
 
-// PeerJS config — using peerjs.com cloud (the official hosted server)
-// key:'peerjs' is the default public key for peerjs.com
-function makePeerConfig() {
+<script>
+// ════════════════════════════════════════════════════════════
+//  PEERJS CONFIG  –  0.peerjs.com (official stable server)
+// ════════════════════════════════════════════════════════════
+function pjCfg() {
   return {
-    host: '0.peerjs.com',
-    port: 443,
-    path: '/',
-    secure: true,
-    key: 'peerjs',
-    debug: 2,
+    host: '0.peerjs.com', port: 443, path: '/', secure: true, key: 'peerjs', debug: 1,
     config: {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        // Free TURN from Open Relay Project
-        { urls: 'turn:openrelay.metered.ca:80',       username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443',      username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        { urls: 'turn:openrelay.metered.ca:80',               username:'openrelayproject', credential:'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443',              username:'openrelayproject', credential:'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject', credential:'openrelayproject' },
       ]
     }
   };
 }
 
-// ─── Lobby ────────────────────────────────────────────────────────────────
-function swTab(t) {
-  document.getElementById('tj').classList.toggle('on', t==='j');
-  document.getElementById('tc').classList.toggle('on', t==='c');
-  document.getElementById('pj').style.display  = t==='j' ? '' : 'none';
-  document.getElementById('pc2').style.display = t==='c' ? '' : 'none';
-  if (t === 'c') genCode();
+// ── state ────────────────────────────────────────────────────
+let myPeer=null, remConn=null, remCall=null;
+let localStream=null, screenStream=null;
+let myName='', peerName='', roomCode='', myRole='';
+let micOn=true, camOn=true, handUp=false;
+let recording=false, recorder, recChunks=[];
+let meetStart=0, timerInt, recInt, recSecs=0;
+let rtOpen=false, spotlightSrc='local';
+let pendingGuestConn=null, pendingGuestName='';
+
+// ── lobby ─────────────────────────────────────────────────────
+function swTab(t){
+  document.getElementById('tj').classList.toggle('on',t==='j');
+  document.getElementById('tc').classList.toggle('on',t==='c');
+  document.getElementById('pj').style.display  =t==='j'?'':'none';
+  document.getElementById('pc2').style.display =t==='c'?'':'none';
+  if(t==='c') genCode();
 }
-function genCode() {
-  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  roomCode = Array.from({length:6}, () => a[Math.floor(Math.random()*a.length)]).join('');
-  document.getElementById('codeEl').textContent = roomCode;
+function genCode(){
+  const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  roomCode=Array.from({length:6},()=>a[Math.floor(Math.random()*a.length)]).join('');
+  document.getElementById('codeEl').textContent=roomCode;
 }
-function cpCode() {
-  if (!roomCode) return;
-  navigator.clipboard.writeText(roomCode)
-    .then(() => toast('📋 Copied to clipboard!'))
-    .catch(() => toast('Code: ' + roomCode));
+function cpCode(){
+  if(!roomCode)return;
+  navigator.clipboard.writeText(roomCode).then(()=>toast('📋 Copied!')).catch(()=>toast('Code: '+roomCode));
 }
-function setStat(t, c='g') {
-  document.getElementById('stxt').textContent = t;
-  document.getElementById('sdot').className = 'dot ' + (c==='ok'?'d-ok': c==='a'?'d-a':'d-g');
+function setStat(t,c='g'){
+  document.getElementById('stxt').textContent=t;
+  document.getElementById('sdot').className='dot '+(c==='ok'?'d-ok':c==='a'?'d-a':'d-g');
 }
 
-// ─── Media ────────────────────────────────────────────────────────────────
-async function getMedia() {
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-    document.getElementById('lv').srcObject = localStream;
+// ── media ─────────────────────────────────────────────────────
+async function getMedia(){
+  try{
+    // Ask for audio + video explicitly
+    localStream=await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},
+      audio:{echoCancellation:true,noiseSuppression:true,sampleRate:48000}
+    });
+    document.getElementById('lv').srcObject=localStream;
     setStat('Ready','ok'); return true;
-  } catch(e) {
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({video:false, audio:true});
-      document.getElementById('lv').srcObject = localStream;
-      camOn = false; updCam(); setStat('Audio only','a');
-      toast('⚠️ No camera — continuing audio only'); return true;
-    } catch(e2) {
+  }catch(e){
+    console.warn('Video+audio failed:',e);
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({video:false,audio:{echoCancellation:true,noiseSuppression:true}});
+      document.getElementById('lv').srcObject=localStream;
+      camOn=false; updCam(); setStat('Audio only','a'); toast('⚠️ No camera — audio only'); return true;
+    }catch(e2){
       setStat('Access denied');
-      toast('❌ Please allow camera/mic access and reload'); return false;
+      toast('❌ Allow camera/mic in browser and reload'); return false;
     }
   }
 }
 
-// ─── CREATE (Host) ────────────────────────────────────────────────────────
-async function doCreate() {
-  myName = document.getElementById('cn').value.trim();
-  if (!myName) { toast('Please enter your name'); return; }
-  const btn = document.getElementById('cbtn');
-  btn.disabled = true; btn.textContent = 'Starting…';
-  setStat('Getting camera…','a');
-  const ok = await getMedia();
-  if (!ok) { btn.disabled=false; btn.textContent='⚡ Start Meeting'; return; }
-  myRole = 'host';
-  setStat('Connecting to signaling…','a');
-
-  // Host uses room code as their Peer ID so guest can call them directly
-  myPeer = new Peer('room-' + roomCode, makePeerConfig());
-
-  myPeer.on('error', err => {
-    console.error('Peer error:', err.type, err);
-    if (err.type === 'unavailable-id') {
-      // Room code already in use — try with suffix
-      toast('⚠️ Code taken, generating new one…');
-      myPeer.destroy();
-      genCode();
-      btn.disabled=false; btn.textContent='⚡ Start Meeting';
-      setStat('Try starting again','g');
-    } else if (err.type === 'peer-unavailable') {
-      toast('Guest not found yet — waiting…');
-    } else {
-      toast('Connection error: ' + err.type);
-    }
-  });
-
-  myPeer.on('open', id => {
-    document.getElementById('ipid').textContent = id;
-    setStat('Meeting ready — share code!','ok');
-    enterMeeting();
-
-    // Accept incoming calls (guest video)
-    myPeer.on('call', incoming => {
-      remoteCall = incoming;
-      incoming.answer(localStream);
-      incoming.on('stream', remoteStream => {
-        document.getElementById('rv').srcObject = remoteStream;
-        onPeerStream();
-      });
-      incoming.on('close', onPeerLeft);
-      incoming.on('error', onPeerLeft);
-    });
-
-    // Accept data connection (chat/signals)
-    myPeer.on('connection', conn => {
-      remoteConn = conn;
-      remoteConn.on('open', () => {
-        remoteConn.send(JSON.stringify({t:'name', n:myName}));
-      });
-      remoteConn.on('data', d => onData(JSON.parse(d)));
-      remoteConn.on('close', onPeerLeft);
-    });
-  });
-}
-
-// ─── JOIN (Guest) ─────────────────────────────────────────────────────────
-async function doJoin() {
-  myName = document.getElementById('jn').value.trim();
-  roomCode = document.getElementById('jc').value.trim().toUpperCase();
-  if (!myName) { toast('Please enter your name'); return; }
-  if (roomCode.length < 4) { toast('Enter the full meeting code'); return; }
-  const btn = document.getElementById('jbtn');
-  btn.disabled = true; btn.textContent = 'Connecting…';
-  setStat('Getting camera…','a');
-  const ok = await getMedia();
-  if (!ok) { btn.disabled=false; btn.textContent='🚀 Join Meeting'; return; }
-  myRole = 'guest';
+// ── CREATE (host) ─────────────────────────────────────────────
+async function doCreate(){
+  myName=document.getElementById('cn').value.trim();
+  if(!myName){toast('Enter your name');return;}
+  const btn=document.getElementById('cbtn');
+  btn.disabled=true; btn.textContent='Starting…';
+  setStat('Getting media…','a');
+  const ok=await getMedia(); if(!ok){btn.disabled=false;btn.textContent='⚡ Start Meeting';return;}
+  myRole='host';
   setStat('Connecting…','a');
-
-  // Guest uses a random Peer ID
-  myPeer = new Peer(makePeerConfig());
-
-  myPeer.on('error', err => {
-    console.error('Peer error:', err.type, err);
-    if (err.type === 'peer-unavailable') {
-      toast('❌ Meeting not found. Check the code.');
-      btn.disabled=false; btn.textContent='🚀 Join Meeting';
-      setStat('Room not found','g');
-      myPeer.destroy(); myPeer = null;
-      document.getElementById('meeting').style.display = 'none';
-      document.getElementById('lobby').style.display = '';
-    } else {
-      toast('Error: ' + err.type + '. Retrying…');
-    }
+  myPeer=new Peer('room-'+roomCode, pjCfg());
+  myPeer.on('error',err=>{
+    console.error('Peer err:',err.type,err);
+    if(err.type==='unavailable-id'){
+      toast('⚠️ Code taken — generating new one');
+      myPeer.destroy(); genCode();
+      btn.disabled=false; btn.textContent='⚡ Start Meeting'; setStat('Try again','g');
+    } else { toast('Error: '+err.type); }
   });
-
-  myPeer.on('open', myId => {
-    document.getElementById('ipid').textContent = myId;
-    enterMeeting(true);
-
-    const hostId = 'room-' + roomCode;
-
-    // Open data channel to host
-    remoteConn = myPeer.connect(hostId, {reliable: true});
-    remoteConn.on('open', () => {
-      remoteConn.send(JSON.stringify({t:'name', n:myName}));
-      // Now place the video call
-      remoteCall = myPeer.call(hostId, localStream);
-      remoteCall.on('stream', remoteStream => {
-        document.getElementById('rv').srcObject = remoteStream;
-        onPeerStream();
+  myPeer.on('open',id=>{
+    setStat('Meeting live!','ok');
+    enterMeeting();
+    // ── AUDIO FIX: answer call immediately with full stream ──
+    myPeer.on('call',incoming=>{
+      // Only answer if guest was admitted
+      incoming.answer(localStream);   // <-- pass OUR stream so peer gets our audio+video
+      remCall=incoming;
+      incoming.on('stream',remStream=>{
+        attachRemoteStream(remStream);
       });
-      remoteCall.on('close', onPeerLeft);
-      remoteCall.on('error', onPeerLeft);
+      incoming.on('close',onPeerLeft);
+      incoming.on('error',e=>{ console.error('call err',e); onPeerLeft(); });
     });
-    remoteConn.on('data', d => onData(JSON.parse(d)));
-    remoteConn.on('close', onPeerLeft);
-    remoteConn.on('error', e => { toast('Data error: ' + e); });
+    // Data connection — first message tells us who's knocking
+    myPeer.on('connection',conn=>{
+      conn.on('open',()=>{
+        conn.on('data',d=>{
+          const msg=JSON.parse(d);
+          if(msg.t==='knock'){
+            // Guest is knocking — show admit dialog
+            pendingGuestConn=conn;
+            pendingGuestName=msg.n;
+            showAdmitDialog(msg.n);
+          } else {
+            onData(msg, conn);
+          }
+        });
+      });
+      conn.on('close',onPeerLeft);
+    });
   });
 }
 
-// ─── Enter meeting screen ─────────────────────────────────────────────────
-function enterMeeting(isGuest=false) {
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('meeting').style.display = 'flex';
-  document.getElementById('hcode').textContent = roomCode;
-  document.getElementById('ic').textContent = roomCode;
-  document.getElementById('in2').textContent = myName;
-  document.getElementById('wcode').textContent = roomCode;
-  document.getElementById('ln').textContent = myName + ' (You)';
-  document.getElementById('wotxt').textContent = isGuest ? 'Connecting to host…' : 'Waiting for guest…';
-  document.getElementById('wosubtxt').textContent = isGuest
-    ? 'Establishing P2P connection…'
-    : 'Share the code above. Call starts automatically.';
-  setAv('la', myName, '#00d4ff', '#082030');
-  document.getElementById('vg').style.display = 'grid';
-  document.getElementById('wo').style.display = 'flex';
-  meetStart = Date.now();
-  timerInt = setInterval(() => {
-    const s = Math.floor((Date.now() - meetStart) / 1000);
-    document.getElementById('mtimer').textContent = f2(Math.floor(s/60)) + ':' + f2(s%60);
-  }, 1000);
+// ── JOIN (guest) ──────────────────────────────────────────────
+async function doJoin(){
+  myName=document.getElementById('jn').value.trim();
+  roomCode=document.getElementById('jc').value.trim().toUpperCase();
+  if(!myName){toast('Enter your name');return;}
+  if(roomCode.length<4){toast('Enter the full code');return;}
+  const btn=document.getElementById('jbtn');
+  btn.disabled=true; btn.textContent='Connecting…';
+  setStat('Getting media…','a');
+  const ok=await getMedia(); if(!ok){btn.disabled=false;btn.textContent='🚀 Join Meeting';return;}
+  myRole='guest';
+  setStat('Connecting to host…','a');
+  myPeer=new Peer(pjCfg());
+  myPeer.on('error',err=>{
+    console.error('Peer err:',err.type,err);
+    if(err.type==='peer-unavailable'){
+      toast('❌ Meeting not found — check the code');
+      btn.disabled=false; btn.textContent='🚀 Join Meeting'; setStat('Not found','g');
+      myPeer.destroy(); myPeer=null;
+    } else { toast('Error: '+err.type); }
+  });
+  myPeer.on('open',()=>{
+    showWaitRoom();
+    const hostId='room-'+roomCode;
+    // Open data connection to host
+    remConn=myPeer.connect(hostId,{reliable:true});
+    remConn.on('open',()=>{
+      // Knock — tell host our name
+      remConn.send(JSON.stringify({t:'knock',n:myName}));
+      remConn.on('data',d=>{
+        const msg=JSON.parse(d);
+        if(msg.t==='admitted'){
+          // Host let us in — now place the call
+          document.getElementById('wr-sub').textContent='Connecting… hang tight!';
+          const call=myPeer.call(hostId,localStream);
+          remCall=call;
+          call.on('stream',remStream=>{
+            attachRemoteStream(remStream);
+            enterMeeting(true);
+          });
+          call.on('close',onPeerLeft);
+          call.on('error',e=>{ console.error('call err',e); onPeerLeft(); });
+          // Now set up ongoing data messages
+          remConn.on('data', d2=>onData(JSON.parse(d2), remConn));
+          // Send our name for display
+          remConn.send(JSON.stringify({t:'name',n:myName}));
+        } else if(msg.t==='denied'){
+          cancelWait();
+          toast('❌ Host denied your request to join');
+        } else {
+          onData(msg, remConn);
+        }
+      });
+    });
+    remConn.on('close',onPeerLeft);
+    remConn.on('error',e=>{ toast('Connection error: '+e); });
+  });
 }
 
-function setAv(id, name, col, bg) {
-  const el = document.getElementById(id);
-  el.textContent = name.substring(0,2).toUpperCase();
-  el.style.color = col; el.style.background = bg; el.style.borderColor = col+'55';
+// ── waiting room (guest) ──────────────────────────────────────
+function showWaitRoom(){
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('waitroom').style.display='flex';
+  document.getElementById('wr-vid').srcObject=localStream;
+}
+function cancelWait(){
+  remConn?.close(); myPeer?.destroy(); myPeer=null; remConn=null;
+  localStream?.getTracks().forEach(t=>t.stop()); localStream=null;
+  document.getElementById('waitroom').style.display='none';
+  document.getElementById('lobby').style.display='';
+  document.getElementById('jbtn').disabled=false;
+  document.getElementById('jbtn').textContent='🚀 Join Meeting';
+  setStat('Enter your name to begin');
 }
 
-function onPeerStream() {
-  document.getElementById('wo').style.display = 'none';
-  document.getElementById('vg').className = 'vgrid g2';
-  document.getElementById('rt').style.display = '';
-  document.getElementById('ppill').style.display = '';
-  document.getElementById('wpill').style.display = 'none';
-  document.getElementById('istat').textContent = 'Connected';
-  document.getElementById('istat').style.color = 'var(--green)';
-  toast('🟢 ' + (peerName || 'Peer') + ' connected!');
+// ── admit / deny (host) ───────────────────────────────────────
+function showAdmitDialog(name){
+  document.getElementById('an-name').textContent=name;
+  document.getElementById('admit-notif').style.display='block';
+}
+function admitGuest(){
+  document.getElementById('admit-notif').style.display='none';
+  if(!pendingGuestConn)return;
+  remConn=pendingGuestConn;
+  pendingGuestConn=null;
+  // Tell guest they're admitted
+  remConn.send(JSON.stringify({t:'admitted'}));
+  // Set up data handler for ongoing messages (name/chat/etc)
+  // Note: data handler already set in connection listener above, just pass through
+  toast('✅ '+pendingGuestName+' admitted');
+}
+function denyGuest(){
+  document.getElementById('admit-notif').style.display='none';
+  if(!pendingGuestConn)return;
+  pendingGuestConn.send(JSON.stringify({t:'denied'}));
+  setTimeout(()=>pendingGuestConn?.close(),500);
+  pendingGuestConn=null;
+  toast('🚫 Guest denied');
 }
 
-function onPeerLeft() {
-  document.getElementById('ppill').style.display = 'none';
-  document.getElementById('wpill').style.display = '';
-  document.getElementById('wpill').textContent = 'Peer left';
-  document.getElementById('rt').style.display = 'none';
-  document.getElementById('vg').className = 'vgrid g1';
-  document.getElementById('istat').textContent = 'Disconnected';
-  document.getElementById('istat').style.color = 'var(--red)';
+// ── attach remote stream ──────────────────────────────────────
+function attachRemoteStream(stream){
+  const rv=document.getElementById('rv');
+  // AUDIO FIX: must set srcObject then call play(), and NOT mute remote video
+  rv.srcObject=stream;
+  rv.muted=false;   // <-- critical: never mute the remote video
+  rv.volume=1.0;
+  rv.play().catch(e=>{ console.warn('play failed',e); });
+
+  // Also pipe audio to an AudioContext to force it alive (Safari fix)
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=ctx.createMediaStreamSource(stream);
+    src.connect(ctx.destination);
+  }catch(e){}
+
+  onPeerStream();
+}
+
+// ── enter meeting ─────────────────────────────────────────────
+function enterMeeting(fromWait=false){
+  if(fromWait) document.getElementById('waitroom').style.display='none';
+  else document.getElementById('lobby').style.display='none';
+  document.getElementById('meeting').style.display='flex';
+  document.getElementById('hcode').textContent=roomCode;
+  document.getElementById('ic').textContent=roomCode;
+  document.getElementById('in2').textContent=myName;
+  document.getElementById('irole').textContent=myRole==='host'?'🔑 Host':'👤 Guest';
+  document.getElementById('th-local-name').textContent=myName+' (You)';
+  setThumbAv('th-local-av','th-local-av-inner',myName,'#00e0ff','#082030');
+
+  // Start with local in spotlight
+  setSpotlight('local');
+
+  meetStart=Date.now();
+  timerInt=setInterval(()=>{
+    const s=Math.floor((Date.now()-meetStart)/1000);
+    document.getElementById('mtimer').textContent=f2(Math.floor(s/60))+':'+f2(s%60);
+  },1000);
+}
+
+// ── spotlight logic ───────────────────────────────────────────
+function setSpotlight(src){
+  spotlightSrc=src;
+  const spotVid=document.getElementById('spot-vid');
+  const spotAv=document.getElementById('spot-av');
+  const spotAvInner=document.getElementById('spot-av-inner');
+  const spotName=document.getElementById('spot-name');
+
+  document.getElementById('th-local').classList.toggle('active-thumb',src==='local');
+  document.getElementById('th-remote').classList.toggle('active-thumb',src==='remote');
+
+  if(src==='local'){
+    spotVid.srcObject=localStream;
+    spotVid.muted=true; // always mute local to avoid echo
+    spotVid.classList.add('mir');
+    spotVid.play().catch(()=>{});
+    spotName.textContent=myName+' (You)';
+    spotAv.style.display=(!camOn)?'flex':'none';
+    if(!camOn){ setSpotAvStyle(spotAvInner,myName,'#00e0ff','#082030'); }
+  } else {
+    const rv=document.getElementById('rv');
+    spotVid.srcObject=rv.srcObject;
+    spotVid.muted=false; // AUDIO FIX: never mute remote in spotlight
+    spotVid.volume=1.0;
+    spotVid.classList.remove('mir');
+    spotVid.play().catch(()=>{});
+    spotName.textContent=peerName||'Peer';
+    spotAv.style.display='none';
+  }
+}
+
+function cycleSpotlight(){
+  // Clicking spotlight cycles between local/remote
+  if(document.getElementById('th-remote').style.display!=='none'){
+    setSpotlight(spotlightSrc==='local'?'remote':'local');
+  }
+}
+
+function setSpotAvStyle(el,name,col,bg){
+  el.textContent=name.substring(0,2).toUpperCase();
+  el.style.color=col; el.style.background=bg; el.style.borderColor=col+'55';
+}
+function setThumbAv(avId,innerId,name,col,bg){
+  const av=document.getElementById(avId);
+  const inner=document.getElementById(innerId);
+  inner.textContent=name.substring(0,2).toUpperCase();
+  inner.style.color=col; inner.style.background=bg; inner.style.borderColor=col+'55';
+}
+
+// ── fullscreen ────────────────────────────────────────────────
+function openFS(e){
+  e.stopPropagation();
+  const fsOverlay=document.getElementById('fs-overlay');
+  const fsVid=document.getElementById('fs-vid');
+  const spotVid=document.getElementById('spot-vid');
+  fsVid.srcObject=spotVid.srcObject;
+  fsVid.muted=(spotlightSrc==='local'); // mute only if local
+  fsVid.volume=1.0;
+  if(spotlightSrc==='local') fsVid.classList.add('mir');
+  else fsVid.classList.remove('mir');
+  fsVid.play().catch(()=>{});
+  document.getElementById('fs-name').textContent=document.getElementById('spot-name').textContent;
+  fsOverlay.style.display='flex';
+  // Try native fullscreen
+  fsOverlay.requestFullscreen?.().catch(()=>{});
+}
+function closeFS(){
+  const fso=document.getElementById('fs-overlay');
+  fso.style.display='none';
+  if(document.fullscreenElement) document.exitFullscreen?.().catch(()=>{});
+}
+document.getElementById('fs-overlay').addEventListener('dblclick',e=>{ if(e.target===document.getElementById('fs-vid')) closeFS(); });
+
+// ── peer stream arrived ───────────────────────────────────────
+function onPeerStream(){
+  document.getElementById('th-remote').style.display='';
+  document.getElementById('ppill').style.display='';
+  document.getElementById('wpill').style.display='none';
+  document.getElementById('istat').textContent='Connected';
+  document.getElementById('istat').style.color='var(--green)';
+  // Auto-switch spotlight to remote peer
+  setSpotlight('remote');
+  toast('🟢 '+(peerName||'Peer')+' connected!');
+}
+function onPeerLeft(){
+  document.getElementById('ppill').style.display='none';
+  document.getElementById('wpill').style.display='';
+  document.getElementById('wpill').textContent='Peer left';
+  document.getElementById('th-remote').style.display='none';
+  setSpotlight('local');
   toast('⚠️ Peer disconnected');
 }
 
-// ─── Data channel ─────────────────────────────────────────────────────────
-function onData(m) {
-  if (m.t === 'name') {
-    peerName = m.n;
-    document.getElementById('rn').textContent = peerName;
-    document.getElementById('ip').textContent = peerName;
-    setAv('ra', peerName, '#a78bfa', '#160a2a');
-    document.getElementById('ra').style.display = 'none'; // hide until video breaks
+// ── data channel ─────────────────────────────────────────────
+function onData(m, conn){
+  if(m.t==='name'){
+    peerName=m.n;
+    document.getElementById('th-remote-name').textContent=peerName;
+    document.getElementById('ip').textContent=peerName;
+    setThumbAv('th-remote-av','th-remote-av-inner',peerName,'#9d6fff','#160a2a');
+    if(spotlightSrc==='remote') document.getElementById('spot-name').textContent=peerName;
   }
-  if (m.t === 'chat') addMsg(peerName, m.x, false);
-  if (m.t === 'react') showR(m.e, 'remote');
-  if (m.t === 'hand') toast((peerName||'Peer') + (m.up ? ' ✋ raised hand' : ' lowered hand'));
+  if(m.t==='chat') addMsg(peerName||'Peer',m.x,false);
+  if(m.t==='react') showR(m.e,'remote');
+  if(m.t==='hand') toast((peerName||'Peer')+(m.up?' ✋ raised hand':' lowered hand'));
 }
-function txDC(obj) {
-  if (remoteConn && remoteConn.open) remoteConn.send(JSON.stringify(obj));
+function txDC(obj){
+  const c=remConn||pendingGuestConn;
+  if(c&&c.open) c.send(JSON.stringify(obj));
 }
 
-// ─── Chat ─────────────────────────────────────────────────────────────────
-function sendMsg() {
-  const inp = document.getElementById('ci');
-  const t = inp.value.trim(); if (!t) return;
-  inp.value = ''; addMsg('You', t, true); txDC({t:'chat', x:t});
+// ── chat ──────────────────────────────────────────────────────
+function sendMsg(){
+  const inp=document.getElementById('ci');
+  const t=inp.value.trim(); if(!t)return;
+  inp.value=''; addMsg('You',t,true); txDC({t:'chat',x:t});
 }
-function addMsg(who, txt, me) {
-  const b = document.getElementById('cbox');
-  const ts = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  const d = document.createElement('div');
-  d.className = 'cm ' + (me?'me':'them');
-  d.innerHTML = `<div class="who">${esc(who)}</div><div>${esc(txt)}</div><div class="ts">${ts}</div>`;
-  b.appendChild(d); b.scrollTop = b.scrollHeight;
-  spanel('chat');
+function addMsg(who,txt,me){
+  const b=document.getElementById('cbox');
+  const ts=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const d=document.createElement('div');
+  d.className='cm '+(me?'me':'them');
+  d.innerHTML=`<div class="who">${esc(who)}</div><div>${esc(txt)}</div><div class="ts">${ts}</div>`;
+  b.appendChild(d); b.scrollTop=b.scrollHeight; spanel('chat');
 }
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// ─── Reactions ────────────────────────────────────────────────────────────
-function react(e) { showR(e,'local'); txDC({t:'react',e}); tRT(); }
-function showR(e, who) {
-  const tile = document.getElementById(who==='local'?'lt':'rt');
-  const el = document.createElement('div'); el.className='freact'; el.textContent=e;
-  el.style.left = (25+Math.random()*50)+'%'; el.style.bottom='50px';
+// ── reactions ─────────────────────────────────────────────────
+function react(e){ showR(e,'local'); txDC({t:'react',e}); tRT(); }
+function showR(e,who){
+  const tile=document.getElementById(who==='local'?'th-local':'th-remote');
+  const el=document.createElement('div'); el.className='freact'; el.textContent=e;
+  el.style.left=(20+Math.random()*60)+'%'; el.style.bottom='10px';
   tile.appendChild(el); setTimeout(()=>el.remove(),2600);
 }
-function tRT() { rtOpen=!rtOpen; document.getElementById('rtray').style.display=rtOpen?'flex':'none'; }
+function tRT(){rtOpen=!rtOpen;document.getElementById('rtray').style.display=rtOpen?'flex':'none';}
 
-// ─── Controls ────────────────────────────────────────────────────────────
-function tMic() {
-  micOn = !micOn;
-  localStream?.getAudioTracks().forEach(t => t.enabled=micOn);
-  const b = document.getElementById('mb');
-  b.innerHTML = (micOn?'🎙️':'🔇') + '<span class="ct">' + (micOn?'Mute':'Unmute') + '</span>';
-  b.className = 'c ' + (micOn?'':'off');
-  document.getElementById('lmicon').style.display = micOn?'none':'';
+// ── controls ──────────────────────────────────────────────────
+function tMic(){
+  micOn=!micOn;
+  localStream?.getAudioTracks().forEach(t=>t.enabled=micOn);
+  const b=document.getElementById('mb');
+  b.innerHTML=(micOn?'🎙️':'🔇')+'<span class="ct">'+(micOn?'Mute':'Unmute')+'</span>';
+  b.className='c '+(micOn?'':'off');
+  document.getElementById('th-local-muted').style.display=micOn?'none':'';
+  txDC({t:'mic',on:micOn}); // inform peer
 }
-function tCam() {
-  camOn = !camOn;
-  localStream?.getVideoTracks().forEach(t => t.enabled=camOn);
+function tCam(){
+  camOn=!camOn;
+  localStream?.getVideoTracks().forEach(t=>t.enabled=camOn);
   updCam();
 }
-function updCam() {
-  const b = document.getElementById('cb2');
-  b.innerHTML = (camOn?'📷':'🚫') + '<span class="ct">' + (camOn?'Stop Cam':'Start Cam') + '</span>';
-  b.className = 'c ' + (camOn?'':'off');
-  document.getElementById('lv').style.display = camOn?'':'none';
-  document.getElementById('la').style.display = camOn?'none':'';
+function updCam(){
+  const b=document.getElementById('cb2');
+  b.innerHTML=(camOn?'📷':'🚫')+'<span class="ct">'+(camOn?'Stop Cam':'Start Cam')+'</span>';
+  b.className='c '+(camOn?'':'off');
+  document.getElementById('lv').style.opacity=camOn?'1':'0';
+  document.getElementById('th-local-av').style.display=camOn?'none':'flex';
+  if(spotlightSrc==='local'){
+    document.getElementById('spot-av').style.display=camOn?'none':'flex';
+    if(!camOn) setSpotAvStyle(document.getElementById('spot-av-inner'),myName,'#00e0ff','#082030');
+  }
 }
-async function tScreen() {
-  if (screenStream) {
+async function tScreen(){
+  if(screenStream){
     screenStream.getTracks().forEach(t=>t.stop()); screenStream=null;
-    const vt = localStream?.getVideoTracks()[0];
-    if (remoteCall && vt) {
-      const s = remoteCall.peerConnection?.getSenders().find(s=>s.track?.kind==='video');
-      if (s) s.replaceTrack(vt);
+    const vt=localStream?.getVideoTracks()[0];
+    if(remCall&&vt){
+      const s=remCall.peerConnection?.getSenders().find(s=>s.track?.kind==='video');
+      if(s) s.replaceTrack(vt);
     }
-    document.getElementById('lv').srcObject = localStream;
+    document.getElementById('lv').srcObject=localStream;
+    if(spotlightSrc==='local') document.getElementById('spot-vid').srcObject=localStream;
     toast('🖥️ Screen share stopped'); return;
   }
-  try {
-    screenStream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
-    const st = screenStream.getVideoTracks()[0];
-    if (remoteCall) {
-      const s = remoteCall.peerConnection?.getSenders().find(s=>s.track?.kind==='video');
-      if (s) s.replaceTrack(st);
+  try{
+    screenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+    const st=screenStream.getVideoTracks()[0];
+    if(remCall){
+      const s=remCall.peerConnection?.getSenders().find(s=>s.track?.kind==='video');
+      if(s) s.replaceTrack(st);
     }
-    document.getElementById('lv').srcObject = screenStream;
-    st.onended = () => tScreen();
+    document.getElementById('lv').srcObject=screenStream;
+    if(spotlightSrc==='local') document.getElementById('spot-vid').srcObject=screenStream;
+    st.onended=()=>tScreen();
     toast('🖥️ Screen sharing');
-  } catch(e) { toast('Screen share cancelled'); }
+  }catch(e){toast('Screen share cancelled');}
 }
-function tHand() {
-  handUp = !handUp;
-  document.getElementById('hb').className = 'c ' + (handUp?'hi':'');
+function tHand(){
+  handUp=!handUp;
+  document.getElementById('hb').className='c '+(handUp?'hi':'');
   txDC({t:'hand',up:handUp}); toast(handUp?'✋ Hand raised':'Hand lowered');
 }
 
-// ─── Recording ────────────────────────────────────────────────────────────
-function toggleRec() {
-  if (!recording) {
-    let mime = 'video/webm;codecs=vp9,opus';
-    if (!MediaRecorder.isTypeSupported(mime)) mime='video/webm';
-    try { recorder=new MediaRecorder(localStream,{mimeType:mime}); }
-    catch(e) { recorder=new MediaRecorder(localStream); }
+// ── recording ─────────────────────────────────────────────────
+function toggleRec(){
+  if(!recording){
+    let mime='video/webm;codecs=vp9,opus';
+    if(!MediaRecorder.isTypeSupported(mime)) mime='video/webm';
+    try{recorder=new MediaRecorder(localStream,{mimeType:mime});}
+    catch(e){recorder=new MediaRecorder(localStream);}
     recChunks=[]; recorder.ondataavailable=e=>recChunks.push(e.data);
     recorder.onstop=()=>{
       const blob=new Blob(recChunks,{type:'video/webm'});
@@ -591,40 +819,42 @@ function toggleRec() {
     document.getElementById('recbtn').classList.add('hi');
     recInt=setInterval(()=>{recSecs++;document.getElementById('rectime').textContent=f2(Math.floor(recSecs/60))+':'+f2(recSecs%60);},1000);
     toast('⏺️ Recording');
-  } else {
+  }else{
     recorder.stop(); recording=false; clearInterval(recInt);
     document.getElementById('recpill').style.display='none';
     document.getElementById('recbtn').classList.remove('hi');
   }
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────
-function spanel(p) {
+// ── sidebar ───────────────────────────────────────────────────
+function spanel(p){
   document.querySelectorAll('.stab').forEach((b,i)=>b.classList.toggle('on',['chat','info'][i]===p));
   document.querySelectorAll('.spanel').forEach(el=>el.classList.remove('on'));
   document.getElementById('sp-'+p).classList.add('on');
 }
-function tSidebar() { const s=document.getElementById('sb'); s.style.display=s.style.display==='none'?'':'none'; }
+function tSidebar(){const s=document.getElementById('sb');s.style.display=s.style.display==='none'?'':'none';}
 
-// ─── End call ─────────────────────────────────────────────────────────────
-function endCall() {
-  remoteCall?.close(); remoteConn?.close(); myPeer?.destroy();
+// ── end call ──────────────────────────────────────────────────
+function endCall(){
+  closeFS();
+  remCall?.close(); remConn?.close(); myPeer?.destroy();
   localStream?.getTracks().forEach(t=>t.stop());
   screenStream?.getTracks().forEach(t=>t.stop());
   clearInterval(timerInt); clearInterval(recInt);
-  myPeer=remoteConn=remoteCall=localStream=screenStream=null;
-  micOn=true; camOn=true; handUp=false; recording=false;
+  myPeer=remConn=remCall=localStream=screenStream=null;
+  micOn=true; camOn=true; handUp=false; recording=false; spotlightSrc='local';
   document.getElementById('meeting').style.display='none';
+  document.getElementById('admit-notif').style.display='none';
   document.getElementById('lobby').style.display='';
   document.getElementById('jbtn').disabled=false; document.getElementById('jbtn').textContent='🚀 Join Meeting';
   document.getElementById('cbtn').disabled=false; document.getElementById('cbtn').textContent='⚡ Start Meeting';
   document.getElementById('mtimer').textContent='00:00';
-  setStat('Enter your name to begin');
-  genCode(); toast('👋 Left the meeting');
+  document.getElementById('th-remote').style.display='none';
+  setStat('Enter your name to begin'); genCode(); toast('👋 Left the meeting');
 }
 
-function f2(n) { return String(n).padStart(2,'0'); }
-function toast(msg, d=2800) {
+function f2(n){return String(n).padStart(2,'0');}
+function toast(msg,d=3000){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),d);
