@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NexMeet</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07090f;--surf:#0e1420;--s2:#151d2b;--s3:#1b2537;
+  --cyan:#00d4ff;--purple:#7c3aed;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;
+  --text:#dde6f0;--muted:#4d6070;--border:#1d2d3f;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+
+.orb{position:fixed;border-radius:50%;filter:blur(110px);pointer-events:none;z-index:0}
+.orb1{width:500px;height:500px;background:radial-gradient(circle,rgba(0,212,255,.07),transparent 70%);top:-180px;right:-120px}
+.orb2{width:380px;height:380px;background:radial-gradient(circle,rgba(124,58,237,.06),transparent 70%);bottom:-80px;left:-80px}
+
+/* ── LOBBY ── */
+#lobby{position:relative;z-index:1;height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{
+  width:100%;max-width:420px;background:var(--surf);
+  border:1px solid var(--border);border-radius:22px;padding:36px;
+  box-shadow:0 32px 80px rgba(0,0,0,.5);position:relative;
+}
+.card::before{content:'';position:absolute;inset:0;border-radius:22px;padding:1px;
+  background:linear-gradient(135deg,rgba(0,212,255,.25),transparent 50%,rgba(124,58,237,.15));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+
+.logo{display:flex;align-items:center;gap:11px;margin-bottom:28px}
+.logo-icon{width:42px;height:42px;border-radius:13px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.logo-name{font-family:'Syne',sans-serif;font-weight:800;font-size:21px;letter-spacing:-.4px}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.pill-cyan{background:rgba(0,212,255,.09);color:var(--cyan);border:1px solid rgba(0,212,255,.2)}
+.pill-green{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.pill-amber{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.pill-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+
+.tabs{display:flex;gap:3px;background:var(--s2);padding:4px;border-radius:10px;margin-bottom:22px}
+.tab{flex:1;padding:8px;border-radius:8px;border:none;background:none;color:var(--muted);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s}
+.tab.on{background:var(--s3);color:var(--text)}
+
+lbl{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:.04em}
+.inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:9px;
+  padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;
+  outline:none;transition:border-color .2s;margin-bottom:13px}
+.inp:focus{border-color:var(--cyan)}
+.inp::placeholder{color:var(--muted)}
+.inp.code-inp{letter-spacing:5px;font-family:'Syne',sans-serif;font-size:20px;text-transform:uppercase;text-align:center}
+
+.btn{width:100%;padding:12px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--cyan);color:#000;box-shadow:0 0 22px rgba(0,212,255,.28)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 0 32px rgba(0,212,255,.45)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--s2);color:var(--text);border:1px solid var(--border);margin-bottom:10px}
+.btn-ghost:hover{background:var(--s3);border-color:var(--cyan)}
+
+.codebox{
+  background:var(--s2);border:1px solid rgba(0,212,255,.25);border-radius:11px;
+  padding:14px;text-align:center;margin-bottom:13px;cursor:pointer;transition:all .2s;
+}
+.codebox:hover{border-color:var(--cyan);background:rgba(0,212,255,.04)}
+.codebox .codetext{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;
+  letter-spacing:8px;color:var(--cyan);text-shadow:0 0 16px rgba(0,212,255,.35)}
+.codebox .codesub{font-size:11px;color:var(--muted);margin-top:4px}
+
+.statusrow{display:flex;align-items:center;gap:8px;padding:9px 13px;
+  background:var(--s2);border:1px solid var(--border);border-radius:9px;
+  font-size:13px;color:var(--muted);margin-top:11px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.dot-green{background:var(--green);animation:blink 1.6s infinite}
+.dot-amber{background:var(--amber);animation:blink .9s infinite}
+.dot-gray{background:var(--muted)}
+
+/* ── MEETING ── */
+#meeting{display:none;position:relative;z-index:1;height:100%;flex-direction:column}
+
+.mhdr{height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;border-bottom:1px solid var(--border);
+  background:rgba(14,20,32,.88);backdrop-filter:blur(14px);flex-shrink:0}
+.mhdr-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:15px}
+.mhdr-code{font-family:'Syne',sans-serif;font-size:13px;letter-spacing:3px;color:var(--cyan)}
+.mbody{flex:1;display:flex;overflow:hidden;min-height:0}
+
+/* video area */
+.varea{flex:1;display:flex;flex-direction:column;padding:12px;gap:10px;overflow:hidden;position:relative}
+.vgrid{flex:1;display:grid;gap:10px;min-height:0}
+.vgrid.g1{grid-template-columns:1fr}
+.vgrid.g2{grid-template-columns:1fr 1fr}
+
+.vtile{position:relative;background:var(--s2);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  transition:border-color .25s,box-shadow .25s}
+.vtile.speaking{border-color:var(--cyan);box-shadow:0 0 18px rgba(0,212,255,.22)}
+.vtile video{width:100%;height:100%;object-fit:cover;display:block}
+.vtile video.mirror{transform:scaleX(-1)}
+.vtile.nocam video{display:none}
+.vtag{position:absolute;bottom:10px;left:10px;
+  background:rgba(7,9,15,.78);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:7px;
+  padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:5px}
+.av{width:68px;height:68px;border-radius:50%;border:3px solid;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:24px;font-weight:800}
+
+/* waiting */
+.waiting{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;background:var(--bg)}
+.spinner{width:46px;height:46px;border-radius:50%;border:3px solid var(--border);
+  border-top-color:var(--cyan);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* sidebar */
+.sidebar{width:290px;min-width:290px;display:flex;flex-direction:column;
+  border-left:1px solid var(--border);background:rgba(14,20,32,.7);backdrop-filter:blur(10px)}
+.stabs{display:flex;border-bottom:1px solid var(--border)}
+.stab{flex:1;padding:11px 0;border:none;background:none;color:var(--muted);
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .18s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.stab.on{color:var(--text);border-bottom-color:var(--cyan)}
+.spanel{flex:1;overflow-y:auto;padding:13px;display:none;flex-direction:column}
+.spanel.on{display:flex}
+.spanel::-webkit-scrollbar{width:3px}
+.spanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* chat */
+.chatbox{flex:1;overflow-y:auto;margin-bottom:10px}
+.chatbox::-webkit-scrollbar{width:3px}
+.chatbox::-webkit-scrollbar-thumb{background:var(--border)}
+.cmsg{padding:8px 11px;border-radius:9px;margin-bottom:6px;font-size:13px}
+.cmsg.me{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.14);margin-left:18px}
+.cmsg.them{background:var(--s2);border:1px solid var(--border);margin-right:18px}
+.cmsg .who{font-size:10px;font-weight:600;color:var(--cyan);margin-bottom:2px}
+.cmsg .when{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
+.chatrow{display:flex;gap:7px;flex-shrink:0}
+.cinp{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;
+  padding:9px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;
+  outline:none;transition:border-color .2s}
+.cinp:focus{border-color:var(--cyan)}
+.cinp::placeholder{color:var(--muted)}
+.sbtn{width:38px;height:38px;border-radius:9px;border:none;
+  background:var(--cyan);color:#000;cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* info panel */
+.irow{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 11px;background:var(--s2);border:1px solid var(--border);
+  border-radius:9px;margin-bottom:7px;font-size:13px}
+.ilabel{font-size:11px;color:var(--muted)}
+
+/* footer */
+.mftr{height:68px;display:flex;align-items:center;justify-content:center;gap:7px;
+  border-top:1px solid var(--border);background:rgba(14,20,32,.92);backdrop-filter:blur(12px);
+  flex-shrink:0;position:relative;padding:0 18px}
+.ctrl{width:44px;height:44px;border-radius:11px;border:1px solid var(--border);
+  background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .18s;position:relative}
+.ctrl:hover{background:var(--s3);border-color:var(--cyan);color:var(--cyan)}
+.ctrl.off{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--red)}
+.ctrl.hi{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.3);color:var(--cyan)}
+.ctip{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);
+  background:var(--s3);border:1px solid var(--border);border-radius:5px;
+  padding:3px 9px;font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .15s;font-family:'DM Sans',sans-serif}
+.ctrl:hover .ctip{opacity:1}
+.endbtn{padding:0 20px;height:44px;border-radius:11px;border:1px solid rgba(239,68,68,.35);
+  background:rgba(239,68,68,.13);color:var(--red);font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:6px}
+.endbtn:hover{background:rgba(239,68,68,.23)}
+
+/* reaction tray */
+.rtray{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);
+  background:var(--s2);border:1px solid var(--border);border-radius:14px;
+  padding:7px 10px;display:flex;gap:5px;z-index:20}
+.rbtn{width:38px;height:38px;border-radius:9px;border:none;
+  background:var(--s3);font-size:19px;cursor:pointer;transition:transform .1s;
+  display:flex;align-items:center;justify-content:center}
+.rbtn:hover{transform:scale(1.25)}
+
+/* floating reaction */
+.freact{position:absolute;font-size:34px;pointer-events:none;z-index:50;
+  animation:floatup 2.5s ease-out forwards}
+@keyframes floatup{0%{opacity:1;transform:translateY(0) scale(1)}
+  60%{opacity:.8;transform:translateY(-70px) scale(1.3)}
+  100%{opacity:0;transform:translateY(-130px) scale(.7)}}
+
+/* speaking waves */
+.waves{display:flex;align-items:center;gap:2px}
+.waves span{display:block;width:3px;border-radius:2px;background:var(--cyan);animation:wv .75s ease-in-out infinite}
+.waves span:nth-child(2){animation-delay:.12s}
+.waves span:nth-child(3){animation-delay:.24s}
+@keyframes wv{0%,100%{height:3px}50%{height:13px}}
+
+/* rec pill */
+.recpill{display:flex;align-items:center;gap:5px;padding:3px 9px;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
+  border-radius:18px;font-size:12px;color:var(--red)}
+.recdot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+
+/* toast */
+#toast{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);
+  background:var(--s3);border:1px solid var(--border);border-radius:9px;
+  padding:9px 18px;font-size:13px;z-index:999;
+  opacity:0;transition:opacity .28s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+
+/* timer */
+#mtimer{font-family:'Syne',sans-serif;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div id="toast"></div>
+
+<!-- ══════════ LOBBY ══════════ -->
+<div id="lobby">
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-name">NexMeet</div>
+      <div class="logo-sub">Real P2P · WebRTC · No servers</div>
+    </div>
+    <span class="pill pill-cyan" style="margin-left:auto">LIVE</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" id="t-join" onclick="switchTab('join')">Join Meeting</button>
+    <button class="tab" id="t-create" onclick="switchTab('create')">New Meeting</button>
+  </div>
+
+  <!-- JOIN pane -->
+  <div id="pjoin">
+    <lbl>YOUR NAME</lbl>
+    <input class="inp" id="jname" placeholder="Display name" maxlength="28"/>
+    <lbl>MEETING CODE</lbl>
+    <input class="inp code-inp" id="jcode" placeholder="XXXXXX" maxlength="6"
+      oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"/>
+    <button class="btn btn-primary" id="jbtn" onclick="doJoin()">🚀 Join Meeting</button>
+  </div>
+
+  <!-- CREATE pane -->
+  <div id="pcreate" style="display:none">
+    <lbl>YOUR NAME</lbl>
+    <input class="inp" id="cname" placeholder="Display name" maxlength="28"/>
+    <lbl>SHARE THIS CODE WITH YOUR GUEST</lbl>
+    <div class="codebox" onclick="copyLobbyCode()" title="Click to copy">
+      <div class="codetext" id="codetext">——————</div>
+      <div class="codesub">Click to copy · Share with your guest</div>
+    </div>
+    <button class="btn btn-primary" id="cbtn" onclick="doCreate()">⚡ Start Meeting</button>
+  </div>
+
+  <div class="statusrow">
+    <div class="dot dot-gray" id="sdot"></div>
+    <span id="stxt">Enter your name to get started</span>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ MEETING ══════════ -->
+<div id="meeting">
+  <div class="mhdr">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="mhdr-logo">⚡ NexMeet</span>
+      <span style="width:1px;height:18px;background:var(--border);display:block"></span>
+      <span class="mhdr-code" id="hcode"></span>
+      <span id="recpill" class="recpill" style="display:none">
+        <span class="recdot"></span> REC <span id="rectime">00:00</span>
+      </span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="peer-pill" style="display:none" class="pill pill-green">● Connected</span>
+      <span id="wait-pill" class="pill pill-amber">Waiting for peer…</span>
+      <span id="mtimer">00:00</span>
+      <button onclick="copyCode()" style="padding:5px 11px;font-size:12px;width:auto;height:auto"
+        class="btn btn-ghost">📋 Copy code</button>
+    </div>
+  </div>
+
+  <div class="mbody">
+    <div class="varea">
+      <!-- waiting overlay -->
+      <div class="waiting" id="waitover">
+        <div class="spinner"></div>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700">Waiting for your guest…</div>
+        <div style="color:var(--muted);font-size:13px;text-align:center;max-width:280px">
+          Share the code below. As soon as they join, your call will connect automatically.
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;
+          letter-spacing:9px;color:var(--cyan);text-shadow:0 0 20px rgba(0,212,255,.4)" id="wcode"></div>
+        <button onclick="copyCode()" class="btn btn-ghost" style="width:auto;padding:8px 20px;font-size:13px">📋 Copy Code</button>
+      </div>
+
+      <!-- video grid -->
+      <div class="vgrid g1" id="vgrid" style="display:none">
+        <div class="vtile" id="ltile">
+          <video id="lvid" autoplay muted playsinline class="mirror"></video>
+          <div class="av" id="lav" style="display:none"></div>
+          <div class="vtag" id="ltag">
+            <span id="lname">You</span>
+            <span id="lmicon" style="display:none;font-size:11px">🔇</span>
+          </div>
+        </div>
+        <div class="vtile" id="rtile" style="display:none">
+          <video id="rvid" autoplay playsinline></video>
+          <div class="av" id="rav" style="display:none"></div>
+          <div class="vtag" id="rtag">
+            <span id="rname">Peer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="stabs">
+        <button class="stab on" onclick="spanel('chat')">💬 Chat</button>
+        <button class="stab" onclick="spanel('info')">ℹ️ Info</button>
+      </div>
+      <div class="spanel on" id="sp-chat">
+        <div class="chatbox" id="chatbox"></div>
+        <div class="chatrow">
+          <input class="cinp" id="cinp" placeholder="Message…" maxlength="400"
+            onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <button class="sbtn" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+      <div class="spanel" id="sp-info">
+        <div class="irow"><span class="ilabel">Room Code</span>
+          <span id="icode" style="font-family:'Syne',sans-serif;letter-spacing:3px;color:var(--cyan)"></span></div>
+        <div class="irow"><span class="ilabel">Your Name</span><span id="iname"></span></div>
+        <div class="irow"><span class="ilabel">Peer</span><span id="ipeer">Waiting…</span></div>
+        <div class="irow"><span class="ilabel">Status</span><span id="istat" style="color:var(--amber)">Connecting…</span></div>
+        <div class="irow"><span class="ilabel">Encryption</span><span style="color:var(--green)">🔒 DTLS-SRTP</span></div>
+        <div style="margin-top:14px;padding:11px;background:rgba(0,212,255,.04);
+          border:1px solid rgba(0,212,255,.12);border-radius:9px;font-size:12px;
+          color:var(--muted);line-height:1.65">
+          Video &amp; audio travel directly peer-to-peer. Only signaling metadata (ICE candidates &amp; SDP) passes through PeerJS servers.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mftr">
+    <div id="rtray" class="rtray" style="display:none">
+      <button class="rbtn" onclick="react('👍')">👍</button>
+      <button class="rbtn" onclick="react('❤️')">❤️</button>
+      <button class="rbtn" onclick="react('😂')">😂</button>
+      <button class="rbtn" onclick="react('🔥')">🔥</button>
+      <button class="rbtn" onclick="react('👏')">👏</button>
+      <button class="rbtn" onclick="react('😮')">😮</button>
+    </div>
+
+    <div style="position:absolute;left:16px;display:flex;gap:6px">
+      <button class="ctrl" id="recbtn" onclick="toggleRec()">
+        <span class="ctip">Record</span>⏺
+      </button>
+    </div>
+
+    <button class="ctrl" id="micbtn" onclick="toggleMic()"><span class="ctip">Mute</span>🎙️</button>
+    <button class="ctrl" id="cambtn" onclick="toggleCam()"><span class="ctip">Camera</span>📷</button>
+    <button class="ctrl" onclick="toggleScreen()"><span class="ctip">Share Screen</span>🖥️</button>
+    <button class="ctrl" id="handbtn" onclick="toggleHand()"><span class="ctip">Raise Hand</span>✋</button>
+    <button class="ctrl" onclick="toggleRTray()"><span class="ctip">Reactions</span>😊</button>
+    <button class="endbtn" onclick="endCall()">📵 Leave</button>
+
+    <div style="position:absolute;right:16px">
+      <button class="ctrl" onclick="toggleSidebar()"><span class="ctip">Panel</span>⊞</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── globals ────────────────────────────────────────────────────────────
+let peer, conn, call;
+let localStream, screenStream;
+let myName='', peerName='', roomCode='';
+let micOn=true, camOn=true, handUp=false;
+let recording=false, recorder, recChunks=[];
+let meetStart=0, timerInt, recInt, recSecs=0;
+
+// ─── lobby tab switch ────────────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('t-join').classList.toggle('on', t==='join');
+  document.getElementById('t-create').classList.toggle('on', t==='create');
+  document.getElementById('pjoin').style.display = t==='join'?'':'none';
+  document.getElementById('pcreate').style.display = t==='create'?'':'none';
+  if(t==='create') genCode();
+}
+
+function genCode(){
+  const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  roomCode = Array.from({length:6},()=>a[Math.floor(Math.random()*a.length)]).join('');
+  document.getElementById('codetext').textContent = roomCode;
+}
+
+function copyLobbyCode(){
+  navigator.clipboard.writeText(roomCode).then(()=>toast('📋 Copied!')).catch(()=>{});
+}
+function copyCode(){
+  if(roomCode) navigator.clipboard.writeText(roomCode).then(()=>toast('📋 Code copied!')).catch(()=>{});
+}
+
+function setStat(txt,type='gray'){
+  document.getElementById('stxt').textContent=txt;
+  const d=document.getElementById('sdot');
+  d.className='dot '+(type==='green'?'dot-green':type==='amber'?'dot-amber':'dot-gray');
+}
+
+// ─── get media ───────────────────────────────────────────────────────────
+async function getMedia(){
+  try{
+    localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    document.getElementById('lvid').srcObject=localStream;
+    setStat('Camera & mic ready','green'); return true;
+  }catch(e){
+    try{
+      localStream=await navigator.mediaDevices.getUserMedia({video:false,audio:true});
+      document.getElementById('lvid').srcObject=localStream;
+      camOn=false; updateCamUI();
+      setStat('Audio only (no camera)','amber');
+      toast('⚠️ No camera found — audio only');
+      return true;
+    }catch(e2){
+      setStat('Media access denied');
+      toast('❌ Allow camera/mic access and reload');
+      return false;
+    }
+  }
+}
+
+// ─── CREATE (host) ────────────────────────────────────────────────────────
+async function doCreate(){
+  myName = document.getElementById('cname').value.trim();
+  if(!myName){toast('Enter your name first');return;}
+  if(!roomCode) genCode();
+  const btn=document.getElementById('cbtn');
+  btn.disabled=true; btn.textContent='Setting up…';
+  setStat('Requesting camera & mic…','amber');
+
+  const ok=await getMedia();
+  if(!ok){btn.disabled=false;btn.textContent='⚡ Start Meeting';return;}
+
+  setStat('Starting meeting…','amber');
+  // Host peer ID = the roomCode itself so guest can call it directly
+  peer = new Peer(roomCode, {debug:1});
+  peer.on('error', e=>{
+    // If ID taken (room exists), warn
+    if(e.type==='unavailable-id'){
+      toast('⚠️ That code is already in use. Generating a new one…');
+      genCode();
+      btn.disabled=false; btn.textContent='⚡ Start Meeting';
+    } else {
+      toast('Connection error: '+e.type);
+      btn.disabled=false; btn.textContent='⚡ Start Meeting';
+    }
+  });
+  peer.on('open', id=>{
+    setStat('Meeting ready — share the code!','green');
+    enterMeeting();
+    // Wait for guest to call us
+    peer.on('call', incoming=>{
+      call=incoming;
+      call.answer(localStream);
+      call.on('stream', remoteStream=>{
+        document.getElementById('rvid').srcObject=remoteStream;
+        onPeerStream();
+      });
+      call.on('close',()=>onPeerLeft());
+      call.on('error',()=>onPeerLeft());
+    });
+    // Data channel (chat/reactions/hand)
+    peer.on('connection', dc=>{
+      conn=dc;
+      conn.on('open',()=>conn.send(JSON.stringify({t:'name',n:myName})));
+      conn.on('data', onData);
+      conn.on('close',()=>onPeerLeft());
+    });
+  });
+}
+
+// ─── JOIN (guest) ─────────────────────────────────────────────────────────
+async function doJoin(){
+  myName=document.getElementById('jname').value.trim();
+  roomCode=document.getElementById('jcode').value.trim().toUpperCase();
+  if(!myName){toast('Enter your name');return;}
+  if(roomCode.length<4){toast('Enter the full meeting code');return;}
+  const btn=document.getElementById('jbtn');
+  btn.disabled=true; btn.textContent='Connecting…';
+  setStat('Requesting camera & mic…','amber');
+
+  const ok=await getMedia();
+  if(!ok){btn.disabled=false;btn.textContent='🚀 Join Meeting';return;}
+
+  setStat('Connecting to host…','amber');
+  // Guest uses a random peer ID
+  peer = new Peer(undefined, {debug:1});
+  peer.on('error', e=>{
+    toast('Could not connect: '+e.type+'. Check the code and try again.');
+    btn.disabled=false; btn.textContent='🚀 Join Meeting';
+    setStat('Connection failed','gray');
+  });
+  peer.on('open', ()=>{
+    enterMeeting(true); // guest enters immediately with local video
+    // Open data channel to host
+    conn = peer.connect(roomCode, {reliable:true});
+    conn.on('open',()=>{
+      conn.send(JSON.stringify({t:'name',n:myName}));
+      // Now call the host
+      call = peer.call(roomCode, localStream);
+      call.on('stream', remoteStream=>{
+        document.getElementById('rvid').srcObject=remoteStream;
+        onPeerStream();
+      });
+      call.on('close',()=>onPeerLeft());
+      call.on('error',()=>onPeerLeft());
+    });
+    conn.on('data', onData);
+    conn.on('close',()=>onPeerLeft());
+    conn.on('error', e=>toast('Data channel error'));
+    setStat('Waiting for host to accept…','amber');
+  });
+}
+
+// ─── enter meeting screen ─────────────────────────────────────────────────
+function enterMeeting(isGuest=false){
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('meeting').style.display='flex';
+  document.getElementById('hcode').textContent=roomCode;
+  document.getElementById('icode').textContent=roomCode;
+  document.getElementById('iname').textContent=myName;
+  document.getElementById('wcode').textContent=roomCode;
+  document.getElementById('lname').textContent=myName+' (You)';
+  setAv('lav', myName,'#00d4ff','#0a1e2e');
+
+  if(isGuest){
+    // Guest: show their local video immediately, show waiting overlay until host stream arrives
+    document.getElementById('waitover').style.display='flex';
+    document.getElementById('vgrid').style.display='none';
+    // But actually show local tile in background — just show waiting on top
+    document.getElementById('waitover').querySelector('div:nth-child(2)').textContent='Connecting to host…';
+  } else {
+    document.getElementById('waitover').style.display='flex';
+    document.getElementById('vgrid').style.display='none';
+  }
+
+  meetStart=Date.now();
+  timerInt=setInterval(()=>{
+    const s=Math.floor((Date.now()-meetStart)/1000);
+    document.getElementById('mtimer').textContent=f2(Math.floor(s/60))+':'+f2(s%60);
+  },1000);
+}
+
+function setAv(id,name,col,bg){
+  const el=document.getElementById(id);
+  el.textContent=name.substring(0,2).toUpperCase();
+  el.style.color=col; el.style.background=bg; el.style.borderColor=col+'55';
+}
+
+// ─── remote stream arrived ────────────────────────────────────────────────
+function onPeerStream(){
+  document.getElementById('waitover').style.display='none';
+  document.getElementById('vgrid').style.display='grid';
+  document.getElementById('vgrid').className='vgrid g2';
+  document.getElementById('rtile').style.display='';
+  document.getElementById('peer-pill').style.display='';
+  document.getElementById('wait-pill').style.display='none';
+  document.getElementById('istat').textContent='Connected';
+  document.getElementById('istat').style.color='var(--green)';
+  toast('🟢 '+(peerName||'Peer')+' connected!');
+  // Show local tile
+  document.getElementById('ltile').style.display='';
+}
+
+function onPeerLeft(){
+  document.getElementById('peer-pill').style.display='none';
+  document.getElementById('wait-pill').style.display='';
+  document.getElementById('wait-pill').textContent='Peer disconnected';
+  document.getElementById('istat').textContent='Disconnected';
+  document.getElementById('istat').style.color='var(--red)';
+  document.getElementById('rtile').style.display='none';
+  document.getElementById('vgrid').className='vgrid g1';
+  toast('⚠️ Peer left the meeting');
+}
+
+// ─── data channel messages ────────────────────────────────────────────────
+function onData(raw){
+  const m=JSON.parse(raw);
+  if(m.t==='name'){
+    peerName=m.n;
+    document.getElementById('rname').textContent=peerName;
+    document.getElementById('ipeer').textContent=peerName;
+    setAv('rav',peerName,'#a78bfa','#1a0a2e');
+  }
+  if(m.t==='chat') addMsg(peerName,m.txt,false);
+  if(m.t==='react') showReact(m.e,'remote');
+  if(m.t==='hand') toast((peerName||'Peer')+(m.up?' ✋ raised hand':' lowered hand'));
+}
+
+function tx(obj){
+  if(conn && conn.open) conn.send(JSON.stringify(obj));
+}
+
+// ─── chat ─────────────────────────────────────────────────────────────────
+function sendMsg(){
+  const inp=document.getElementById('cinp');
+  const txt=inp.value.trim();
+  if(!txt) return;
+  inp.value='';
+  addMsg('You',txt,true);
+  tx({t:'chat',txt});
+}
+function addMsg(who,txt,me){
+  const box=document.getElementById('chatbox');
+  const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const d=document.createElement('div');
+  d.className='cmsg '+(me?'me':'them');
+  d.innerHTML=`<div class="who">${esc(who)}</div><div>${esc(txt)}</div><div class="when">${t}</div>`;
+  box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+  spanel('chat');
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ─── reactions ────────────────────────────────────────────────────────────
+function react(e){
+  showReact(e,'local');
+  tx({t:'react',e});
+  toggleRTray();
+}
+function showReact(e,who){
+  const tile=document.getElementById(who==='local'?'ltile':'rtile');
+  const el=document.createElement('div');
+  el.className='freact'; el.textContent=e;
+  el.style.left=(25+Math.random()*50)+'%';
+  el.style.bottom='50px';
+  tile.appendChild(el);
+  setTimeout(()=>el.remove(),2600);
+}
+let rtrayOpen=false;
+function toggleRTray(){
+  rtrayOpen=!rtrayOpen;
+  document.getElementById('rtray').style.display=rtrayOpen?'flex':'none';
+}
+
+// ─── mic / cam / screen ───────────────────────────────────────────────────
+function toggleMic(){
+  micOn=!micOn;
+  localStream?.getAudioTracks().forEach(t=>t.enabled=micOn);
+  const b=document.getElementById('micbtn');
+  b.innerHTML=(micOn?'🎙️':'🔇')+'<span class="ctip">'+(micOn?'Mute':'Unmute')+'</span>';
+  b.className='ctrl '+(micOn?'':'off');
+  document.getElementById('lmicon').style.display=micOn?'none':'';
+}
+function toggleCam(){
+  camOn=!camOn;
+  localStream?.getVideoTracks().forEach(t=>t.enabled=camOn);
+  updateCamUI();
+}
+function updateCamUI(){
+  const b=document.getElementById('cambtn');
+  b.innerHTML=(camOn?'📷':'🚫')+'<span class="ctip">'+(camOn?'Stop Cam':'Start Cam')+'</span>';
+  b.className='ctrl '+(camOn?'':'off');
+  document.getElementById('ltile').classList.toggle('nocam',!camOn);
+  document.getElementById('lav').style.display=camOn?'none':'';
+}
+async function toggleScreen(){
+  if(screenStream){
+    screenStream.getTracks().forEach(t=>t.stop());
+    screenStream=null;
+    const vt=localStream?.getVideoTracks()[0];
+    if(call && vt){
+      const s=call.peerConnection?.getSenders().find(s=>s.track?.kind==='video');
+      if(s) s.replaceTrack(vt);
+    }
+    document.getElementById('lvid').srcObject=localStream;
+    toast('🖥️ Screen share stopped');
+    return;
+  }
+  try{
+    screenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+    const st=screenStream.getVideoTracks()[0];
+    if(call){
+      const s=call.peerConnection?.getSenders().find(s=>s.track?.kind==='video');
+      if(s) s.replaceTrack(st);
+    }
+    document.getElementById('lvid').srcObject=screenStream;
+    st.onended=()=>toggleScreen();
+    toast('🖥️ Screen sharing');
+  }catch(e){toast('Screen share cancelled');}
+}
+function toggleHand(){
+  handUp=!handUp;
+  const b=document.getElementById('handbtn');
+  b.className='ctrl '+(handUp?'hi':'');
+  tx({t:'hand',up:handUp});
+  toast(handUp?'✋ Hand raised':'Hand lowered');
+}
+
+// ─── recording ────────────────────────────────────────────────────────────
+function toggleRec(){
+  if(!recording){
+    try{
+      recorder=new MediaRecorder(localStream,{mimeType:'video/webm;codecs=vp9,opus'});
+    }catch(e){recorder=new MediaRecorder(localStream);}
+    recChunks=[];
+    recorder.ondataavailable=e=>recChunks.push(e.data);
+    recorder.onstop=()=>{
+      const blob=new Blob(recChunks,{type:'video/webm'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='nexmeet-'+roomCode+'.webm';
+      a.click();
+      toast('⬇️ Recording saved!');
+    };
+    recorder.start(1000);
+    recording=true;
+    recSecs=0;
+    document.getElementById('recpill').style.display='flex';
+    document.getElementById('recbtn').classList.add('hi');
+    recInt=setInterval(()=>{
+      recSecs++;
+      document.getElementById('rectime').textContent=f2(Math.floor(recSecs/60))+':'+f2(recSecs%60);
+    },1000);
+    toast('⏺️ Recording started');
+  }else{
+    recorder.stop();
+    recording=false;
+    clearInterval(recInt);
+    document.getElementById('recpill').style.display='none';
+    document.getElementById('recbtn').classList.remove('hi');
+  }
+}
+
+// ─── sidebar ──────────────────────────────────────────────────────────────
+function spanel(p){
+  document.querySelectorAll('.stab').forEach((b,i)=>b.classList.toggle('on',['chat','info'][i]===p));
+  document.querySelectorAll('.spanel').forEach(el=>el.classList.remove('on'));
+  document.getElementById('sp-'+p).classList.add('on');
+}
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.style.display=sb.style.display==='none'?'':'none';
+}
+
+// ─── end call ─────────────────────────────────────────────────────────────
+function endCall(){
+  call?.close(); conn?.close(); peer?.destroy();
+  localStream?.getTracks().forEach(t=>t.stop());
+  screenStream?.getTracks().forEach(t=>t.stop());
+  clearInterval(timerInt); clearInterval(recInt);
+  // reset state
+  peer=conn=call=localStream=screenStream=null;
+  micOn=true; camOn=true; handUp=false; recording=false;
+  document.getElementById('meeting').style.display='none';
+  document.getElementById('lobby').style.display='';
+  document.getElementById('jbtn').disabled=false;
+  document.getElementById('jbtn').textContent='🚀 Join Meeting';
+  document.getElementById('cbtn').disabled=false;
+  document.getElementById('cbtn').textContent='⚡ Start Meeting';
+  document.getElementById('mtimer').textContent='00:00';
+  setStat('Enter your name to get started','gray');
+  genCode();
+  toast('👋 You left the meeting');
+}
+
+// ─── utils ────────────────────────────────────────────────────────────────
+function f2(n){return String(n).padStart(2,'0')}
+function toast(msg,d=2800){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),d);
+}
+
+// boot
+genCode();
+</script>
+</body>
+</html>
