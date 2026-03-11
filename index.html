@@ -14,6 +14,7 @@
   --text:#e4edf8;--muted:#3d5470;--border:#162030;
 }
 html,body{height:100%;font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+@supports(-webkit-touch-callout:none){html,body{height:-webkit-fill-available}}
 
 /* LOBBY */
 #lobby{height:100%;display:flex;align-items:center;justify-content:center;padding:20px;position:relative}
@@ -202,10 +203,18 @@ html,body{height:100%;font-family:'Instrument Sans',sans-serif;background:var(--
 #toast.show{opacity:1}
 #mtimer{font-family:'Syne',sans-serif;font-size:13px;color:var(--muted)}
 input[type=file]{display:none}
-@media(max-width:700px){.sidebar{display:none}.thumbs{height:78px}.thumb{width:124px}}
+@media(max-width:700px){.sidebar{display:none}.thumbs{height:80px}.thumb{width:112px}.mhdr{height:44px}.hlogo{display:none}.mftr{height:60px}.c{width:38px;height:38px;font-size:15px}.endb{padding:0 13px;font-size:13px}}
 </style>
 </head>
 <body>
+
+<!-- MOBILE TAP-TO-UNBLOCK -->
+<div id="tap-overlay" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(5,7,13,.92);flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:30px">
+  <div style="font-size:48px">📱</div>
+  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800">Tap to connect</div>
+  <div style="color:var(--muted);font-size:14px;line-height:1.6">Your browser requires a tap<br>to start the video call</div>
+  <button onclick="unblockMobile()" style="margin-top:8px;padding:14px 32px;border-radius:12px;border:none;background:var(--cyan);color:#000;font-family:'Instrument Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 0 24px rgba(0,240,255,.4)">▶ Start Call</button>
+</div>
 <div id="toast"></div>
 <input type="file" id="file-picker" multiple/>
 
@@ -242,7 +251,7 @@ input[type=file]{display:none}
 <div id="waitroom">
   <div class="wr-card">
     <div class="wr-spin"></div>
-    <div class="wr-cam"><video id="wr-vid" autoplay muted playsinline></video></div>
+    <div class="wr-cam"><video id="wr-vid" autoplay muted playsinline webkit-playsinline></video></div>
     <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:8px">Waiting to be admitted</div>
     <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:14px" id="wr-sub">The host will let you in shortly.</div>
     <button class="btn btn-g" onclick="cancelWait()">✕ Cancel</button>
@@ -269,7 +278,7 @@ input[type=file]{display:none}
   <div class="mbody">
     <div class="varea">
       <div class="spotlight" id="spotlight" onclick="cycleSpot()">
-        <video id="spot-vid" autoplay playsinline></video>
+        <video id="spot-vid" autoplay playsinline webkit-playsinline></video>
         <div class="spot-noav" id="spot-noav"><div class="big-av" id="spot-av-i"></div></div>
         <div class="vtag">
           <div class="waves" id="spot-waves" style="display:none"><span></span><span></span><span></span></div>
@@ -280,13 +289,13 @@ input[type=file]{display:none}
       </div>
       <div class="thumbs">
         <div class="thumb active-t" id="th-local" onclick="setSpot('local')">
-          <video id="lv" autoplay muted playsinline class="mir"></video>
+          <video id="lv" autoplay muted playsinline webkit-playsinline class="mir"></video>
           <div class="th-av" id="th-local-av"><div class="sm-av" id="th-local-av-i"></div></div>
           <div class="speak-ring"></div>
           <div class="ttag"><span id="th-local-name">You</span><span id="th-local-crown" style="font-size:10px">👑</span></div>
         </div>
         <div class="thumb" id="th-remote" style="display:none" onclick="setSpot('remote')">
-          <video id="rv" autoplay playsinline></video>
+          <video id="rv" autoplay muted playsinline webkit-playsinline></video>
           <div class="th-av" id="th-remote-av"><div class="sm-av" id="th-remote-av-i"></div></div>
           <div class="speak-ring"></div>
           <div class="ttag"><span id="th-remote-name">Peer</span><span id="th-remote-crown" style="display:none;font-size:10px">👑</span></div>
@@ -370,7 +379,7 @@ input[type=file]{display:none}
 <!-- FULLSCREEN -->
 <div id="fso">
   <button id="fso-close" onclick="closeFS()">✕</button>
-  <video id="fso-vid" autoplay playsinline></video>
+  <video id="fso-vid" autoplay muted playsinline webkit-playsinline></video>
   <div class="fsbar"><span id="fso-name"></span><span class="pill pg">● LIVE</span></div>
 </div>
 
@@ -394,6 +403,7 @@ function pjCfg(){
 // STATE
 // ═══════════════════════════════════════════════
 let myPeer=null, conn=null, remCall=null;
+let remoteStream=null; // store remote stream persistently
 let localStream=null, screenStream=null;
 let audioCtx=null;
 let myName='', peerName='', roomCode='', myRole='';
@@ -585,7 +595,7 @@ async function doJoin(){
           // Place video call
           const c=myPeer.call('room-'+roomCode,localStream);
           remCall=c;
-          c.on('stream',rs=>{attachRemote(rs);enterMeeting(true);});
+          c.on('stream',rs=>{ attachRemote(rs); enterMeeting(true); setTimeout(()=>setSpot('remote'),200); });
           c.on('close',()=>onPeerLeft('call closed'));
           c.on('error',()=>onPeerLeft('call error'));
         } else if(m.t==='denied'){cancelWait();toast('❌ Host denied your request');}
@@ -741,10 +751,38 @@ function denyGuest(){
 // ATTACH REMOTE AUDIO+VIDEO
 // ═══════════════════════════════════════════════
 function attachRemote(stream){
+  remoteStream=stream;
   const rv=document.getElementById('rv');
-  rv.srcObject=stream; rv.muted=true; rv.play().catch(()=>{});
-  resumeCtx().then(()=>wireAudio(stream,true)); // route audio to speakers
-  document.body.addEventListener('click',resumeCtx,{passive:true});
+  rv.srcObject=stream;
+  rv.muted=true;
+  // Mobile-safe play: on iOS/Android we may need a user gesture first
+  const playRv=rv.play();
+  if(playRv&&typeof playRv.then==='function'){
+    playRv.catch(()=>{
+      // Show tap overlay to unblock autoplay on mobile
+      showTapOverlay(stream);
+    });
+  }
+  resumeCtx().then(()=>wireAudio(stream,true));
+  document.body.addEventListener('click',resumeCtx,{once:true,passive:true});
+}
+
+function showTapOverlay(stream){
+  // Store stream reference for the unblock button
+  window._pendingStream=stream;
+  document.getElementById('tap-overlay').style.display='flex';
+}
+
+function unblockMobile(){
+  document.getElementById('tap-overlay').style.display='none';
+  resumeCtx();
+  // Force play all video elements
+  ['rv','spot-vid','lv'].forEach(id=>{
+    const v=document.getElementById(id);
+    if(v&&v.srcObject) v.play().catch(()=>{});
+  });
+  // Re-apply spotlight
+  setSpot(spotSrc);
 }
 
 // ═══════════════════════════════════════════════
@@ -782,7 +820,16 @@ function onPeerStream(){
   document.getElementById('pi-ice').textContent='Connected'; document.getElementById('pi-ice').style.color='var(--green)';
   setAv('th-remote-av-i',peerName||'Peer','#b57bff','#160a2a');
   document.getElementById('th-remote-name').textContent=peerName||'Peer';
-  setSpot('remote'); updateAdminUI();
+  updateAdminUI();
+  // Delay setSpot so the DOM is visible before we assign srcObject (critical on mobile)
+  setTimeout(()=>{ setSpot('remote'); }, 150);
+  // Retry play after 1s as a mobile fallback
+  setTimeout(()=>{
+    const sv=document.getElementById('spot-vid');
+    if(sv.srcObject&&sv.paused) sv.play().catch(()=>{});
+    const rv=document.getElementById('rv');
+    if(rv.srcObject&&rv.paused) rv.play().catch(()=>{});
+  }, 1000);
   sysMsg((peerName||'Peer')+' joined'); toast('🟢 '+(peerName||'Peer')+' connected!');
 }
 
@@ -798,6 +845,7 @@ function onPeerLeft(reason=''){
   document.getElementById('pi-peer').textContent='Left';
   document.getElementById('pi-ice').textContent='Disconnected'; document.getElementById('pi-ice').style.color='var(--red)';
   document.getElementById('rv').srcObject=null;
+  remoteStream=null;
   setSpot('local'); updateAdminUI();
   sysMsg(nm+' left the meeting');
   toast('⚠️ '+nm+' left'+(reason?' · '+reason:''));
@@ -882,8 +930,15 @@ function setSpot(src){
     if(!camOn)setAv('spot-av-i',myName,'#00f0ff','#061820');
     document.getElementById('spot-crown').style.display=isAdmin?'':'none';
   } else {
-    const rv=document.getElementById('rv');
-    if(rv.srcObject){sv.srcObject=rv.srcObject;sv.muted=true;sv.classList.remove('mir');sv.play().catch(()=>{});}
+    // Use stored remoteStream directly — more reliable than rv.srcObject on mobile
+    const stream=remoteStream||document.getElementById('rv').srcObject;
+    if(stream){
+      sv.srcObject=stream;
+      sv.muted=true;
+      sv.classList.remove('mir');
+      const p=sv.play();
+      if(p) p.catch(()=>{ showTapOverlay(stream); });
+    }
     document.getElementById('spot-name').textContent=peerName||'Peer';
     document.getElementById('spot-noav').style.display='none';
     document.getElementById('spot-crown').style.display=peerIsAdmin?'':'none';
@@ -1044,7 +1099,7 @@ function endCall(forced=false){
   clearInterval(timerInt); clearInterval(recInt);
   myPeer=conn=remCall=localStream=screenStream=null;
   micOn=true;camOn=true;handUp=false;recording=false;spotSrc='local';
-  isAdmin=false;peerIsAdmin=false;peerName='';inFile=null;
+  isAdmin=false;peerIsAdmin=false;peerName='';inFile=null;remoteStream=null;
   document.getElementById('meeting').style.display='none';
   document.getElementById('admit-notif').style.display='none';
   document.getElementById('lobby').style.display='';
