@@ -539,19 +539,17 @@ async function doCreate(){
     });
     // Accept single data connection from guest
     myPeer.on('connection',c=>{
-      // Only accept one at a time
       c.on('open',()=>{
+        // Store connection immediately so tx() works for admitted/denied
+        conn=c;
         c.on('data',raw=>{
           const m=safeparse(raw);
           if(!m)return;
           if(m.t==='knock'){pendingConn=c;pendingName=m.n;showAdmit(m.n);}
-          else{
-            if(!conn&&m.t!=='knock')conn=c; // lock in conn after knock phase
-            onData(m);
-          }
+          else onData(m);
         });
-        c.on('close',()=>onPeerLeft('peer disconnected'));
-        c.on('error',()=>onPeerLeft('connection error'));
+        c.on('close',()=>{ conn=null; onPeerLeft('peer disconnected'); });
+        c.on('error',()=>{ conn=null; onPeerLeft('connection error'); });
       });
     });
   });
@@ -571,20 +569,41 @@ async function doJoin(){
   myRole='guest';
   myPeer=new Peer(pjCfg());
   myPeer.on('error',err=>{
-    console.error('peer err',err.type);
+    console.error('peer err',err.type, err.message||'');
     if(err.type==='peer-unavailable'){
-      toast('❌ Meeting not found — check the code');
-      btn.disabled=false; btn.textContent='🚀 Join Meeting'; setStat('Not found','g');
-      myPeer.destroy(); myPeer=null;
-      document.getElementById('waitroom').style.display='none';
-      document.getElementById('lobby').style.display='';
-    } else toast('PeerJS error: '+err.type);
+      // Only show "not found" if we haven't gotten past the waiting room yet
+      if(document.getElementById('meeting').style.display!=='flex'){
+        toast('❌ Meeting not found — check the code');
+        btn.disabled=false; btn.textContent='🚀 Join Meeting'; setStat('Not found','g');
+        myPeer.destroy(); myPeer=null;
+        document.getElementById('waitroom').style.display='none';
+        document.getElementById('lobby').style.display='';
+      }
+      // else: ignore — peer-unavailable can fire for call after conn succeeds
+    } else if(err.type==='network'||err.type==='server-error'||err.type==='socket-error'){
+      if(document.getElementById('meeting').style.display!=='flex'){
+        toast('❌ Network error — check connection');
+        btn.disabled=false; btn.textContent='🚀 Join Meeting'; setStat('Error','g');
+        document.getElementById('waitroom').style.display='none';
+        document.getElementById('lobby').style.display='';
+      }
+    } else {
+      console.warn('PeerJS non-fatal error:', err.type);
+    }
   });
-  myPeer.on('open',()=>{
+  myPeer.on('open',myId=>{
     showWaitRoom();
-    // ONE connection for everything — serialization:'json' (default, reliable, string only)
-    conn=myPeer.connect('room-'+roomCode,{reliable:true,serialization:'json'});
+    connectToHost(0);
+  });
+
+  function connectToHost(attempt){
+    if(!myPeer||document.getElementById('meeting').style.display==='flex') return;
+    const hid='room-'+roomCode;
+    document.getElementById('wr-sub').textContent=attempt>0?'Retrying… (attempt '+(attempt+1)+')':'The host will let you in shortly.';
+    conn=myPeer.connect(hid,{reliable:true,serialization:'json',label:'ctrl'});
+    let opened=false;
     conn.on('open',()=>{
+      opened=true;
       tx({t:'knock',n:myName});
       conn.on('data',raw=>{
         const m=safeparse(raw);
@@ -592,19 +611,35 @@ async function doJoin(){
         if(m.t==='admitted'){
           document.getElementById('wr-sub').textContent='Connecting video…';
           tx({t:'name',n:myName,role:myRole});
-          // Place video call
-          const c=myPeer.call('room-'+roomCode,localStream);
-          remCall=c;
-          c.on('stream',rs=>{ attachRemote(rs); enterMeeting(true); setTimeout(()=>setSpot('remote'),200); });
-          c.on('close',()=>onPeerLeft('call closed'));
-          c.on('error',()=>onPeerLeft('call error'));
+          // Place video call AFTER data conn is confirmed working
+          setTimeout(()=>{
+            const c=myPeer.call(hid,localStream);
+            remCall=c;
+            c.on('stream',rs=>{ attachRemote(rs); enterMeeting(true); setTimeout(()=>setSpot('remote'),200); });
+            c.on('close',()=>onPeerLeft('call closed'));
+            c.on('error',e=>{ console.warn('call err',e); });
+          }, 300);
         } else if(m.t==='denied'){cancelWait();toast('❌ Host denied your request');}
         else onData(m);
       });
     });
-    conn.on('close',()=>onPeerLeft('peer disconnected'));
-    conn.on('error',()=>onPeerLeft('connection error'));
-  });
+    conn.on('error',e=>{
+      console.warn('conn err attempt',attempt,e);
+      if(!opened && attempt<3){
+        // Retry after delay
+        setTimeout(()=>connectToHost(attempt+1), 1500);
+      } else if(!opened){
+        toast('❌ Could not reach host — check the code');
+        document.getElementById('waitroom').style.display='none';
+        document.getElementById('lobby').style.display='';
+        document.getElementById('jbtn').disabled=false;
+        document.getElementById('jbtn').textContent='🚀 Join Meeting';
+      }
+    });
+    conn.on('close',()=>{
+      if(document.getElementById('meeting').style.display==='flex') onPeerLeft('peer disconnected');
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -736,7 +771,9 @@ function showAdmit(name){document.getElementById('an-name').textContent=name;doc
 function admitGuest(){
   document.getElementById('admit-notif').style.display='none';
   if(!pendingConn)return;
-  conn=pendingConn; pendingConn=null;
+  // conn is already set to pendingConn in the connection handler
+  // just clear pendingConn and send admitted
+  pendingConn=null;
   tx({t:'admitted'});
   toast('✅ '+pendingName+' admitted');
 }
