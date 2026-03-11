@@ -652,28 +652,52 @@ document.getElementById('file-picker').addEventListener('change',async e=>{
   for(const f of files) await sendFile(f);
 });
 
+// Safe Uint8Array → base64 (no string concat stack overflow)
+function u8ToB64(u8){
+  let bin='',len=u8.length;
+  // Process in 8KB sub-slices to avoid call stack limit
+  const SUB=8192;
+  for(let off=0;off<len;off+=SUB){
+    bin+=String.fromCharCode.apply(null,u8.subarray(off,Math.min(off+SUB,len)));
+  }
+  return btoa(bin);
+}
+
+// Wait until data channel buffer drains below threshold
+function getDC(){
+  // PeerJS 1.x stores the RTCDataChannel in different places by version
+  if(!conn)return null;
+  return conn._dc||conn.dataChannel||conn._channel||null;
+}
+async function waitBuffer(){
+  const dc=getDC();
+  if(!dc)return;
+  const MAX=65536;
+  while(dc.bufferedAmount>MAX){
+    await new Promise(r=>setTimeout(r,20));
+  }
+}
+
 async function sendFile(file){
   if(!conn||!conn.open){toast('No peer connected');return;}
   const buf=await file.arrayBuffer();
   const bytes=new Uint8Array(buf);
   const total=Math.ceil(bytes.length/CHUNK)||1;
   const mime=file.type||'application/octet-stream';
-  // 1. Send metadata
+  // 1. Announce file
   tx({t:'fMeta',name:file.name,size:bytes.length,mime,total});
   toast('📤 Sending '+file.name+'…');
-  // 2. Send chunks as base64 strings
-  for(let i=0;i<total;i++){
-    const slice=bytes.slice(i*CHUNK,(i+1)*CHUNK);
-    // Convert Uint8Array → base64
-    let bin='';
-    for(let j=0;j<slice.length;j++) bin+=String.fromCharCode(slice[j]);
-    const b64=btoa(bin);
-    tx({t:'fChunk',i,b64});
-    // Throttle: yield every 5 chunks so data channel doesn't overflow
-    if(i%5===4) await new Promise(r=>setTimeout(r,10));
-  }
-  // Show in own chat
+  // Show sending bubble immediately
   showFileBubble(file.name,bytes.length,null,true);
+  // 2. Send chunks with backpressure control
+  for(let i=0;i<total;i++){
+    if(!conn||!conn.open){ toast('⚠️ Connection lost during transfer'); return; }
+    await waitBuffer(); // drain buffer before sending next chunk
+    const slice=bytes.subarray(i*CHUNK,(i+1)*CHUNK);
+    tx({t:'fChunk',i,b64:u8ToB64(slice)});
+    // Yield to event loop every chunk so UI stays responsive
+    if(i%3===2) await new Promise(r=>setTimeout(r,0));
+  }
   toast('✅ Sent: '+file.name);
 }
 
@@ -840,12 +864,23 @@ function enterMeeting(fromWait=false){
     const s=Math.floor((Date.now()-meetStart)/1000);
     document.getElementById('mtimer').textContent=f2(Math.floor(s/60))+':'+f2(s%60);
   },1000);
-  // Detect tab/window close → send leave signal
+  // Only fire leave on actual page unload, NOT on tab switch/background
   window.addEventListener('beforeunload',onUnload);
-  document.addEventListener('visibilitychange',onVisChange);
+  // Heartbeat: detect silent disconnects (no conn.on('close') on some browsers)
+  startHeartbeat();
 }
 function onUnload(){ tx({t:'leave'}); }
-function onVisChange(){ if(document.visibilityState==='hidden') tx({t:'leave'}); }
+
+// Heartbeat — sends ping every 8s, expects pong back within 12s
+let hbInterval=null, hbMissed=0;
+function startHeartbeat(){
+  stopHeartbeat();
+  hbInterval=setInterval(()=>{
+    if(!conn||!conn.open){ hbMissed++; if(hbMissed>=2) onPeerLeft('connection lost'); return; }
+    hbMissed=0; tx({t:'ping'});
+  }, 8000);
+}
+function stopHeartbeat(){ clearInterval(hbInterval); hbInterval=null; hbMissed=0; }
 
 // ═══════════════════════════════════════════════
 // PEER STREAM / LEFT
@@ -903,6 +938,8 @@ function onData(m){
       setAv('th-remote-av-i',peerName,'#b57bff','#160a2a');
       if(spotSrc==='remote') document.getElementById('spot-name').textContent=peerName;
       updateAdminUI(); onPeerStream(); break;
+    case 'ping': tx({t:'pong'}); break;
+    case 'pong': hbMissed=0; break;
     case 'chat': addMsg(peerName||'Peer',m.x,false); break;
     case 'react': showR(m.e,'remote'); break;
     case 'hand': toast((peerName||'Peer')+(m.up?' ✋ raised hand':' lowered hand')); break;
@@ -1126,14 +1163,13 @@ function tSidebar(){const s=document.getElementById('sb');s.style.display=s.styl
 function endCall(forced=false){
   if(!forced) tx({t:'leave'});
   window.removeEventListener('beforeunload',onUnload);
-  document.removeEventListener('visibilitychange',onVisChange);
   closeFS();
   if(recording&&recorder)recorder.stop();
   remCall?.close(); conn?.close(); myPeer?.destroy();
   localStream?.getTracks().forEach(t=>t.stop());
   screenStream?.getTracks().forEach(t=>t.stop());
   audioCtx?.close(); audioCtx=null;
-  clearInterval(timerInt); clearInterval(recInt);
+  stopHeartbeat(); clearInterval(timerInt); clearInterval(recInt);
   myPeer=conn=remCall=localStream=screenStream=null;
   micOn=true;camOn=true;handUp=false;recording=false;spotSrc='local';
   isAdmin=false;peerIsAdmin=false;peerName='';inFile=null;remoteStream=null;
